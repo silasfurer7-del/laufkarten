@@ -1,2 +1,3 @@
 # laufkarten
-Kartendaten (OpenStreetMap) für Laufrouten
+
+Kartendaten (© OpenStreetMap-Mitwirkende, ODbL) für Laufrouten-Karten.
