@@ -1,6 +1,7 @@
 from tiles import *
 import networkx as nx, math, pickle
-HOME=(47.45131,9.55342)
+import os
+HOME=tuple(map(float,os.environ.get('HOME_LL','47.45131,9.55342').split(',')))
 z=14; cx,cy=deg2num(*HOME,z); cx,cy=int(cx),int(cy)
 def tile2ll(tx,ty,px,py,ext=4096):
     n=2**z; X=tx+px/ext; Y=ty+(1-py/ext)  # mvt y flipped by decoder
@@ -40,4 +41,4 @@ for a,b,d in G.edges(data=True):
 G=H
 G=G.subgraph(max(nx.connected_components(G),key=len)).copy()
 print(G.number_of_nodes(),G.number_of_edges())
-pickle.dump((G,feats,(cx,cy)),open('g.pkl','wb'))
+pickle.dump((G,feats,(cx,cy)),open(os.environ.get('GOUT','g.pkl'),'wb'))
