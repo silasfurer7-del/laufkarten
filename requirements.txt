@@ -1,0 +1,6 @@
+networkx
+matplotlib
+pillow
+# nur fuer Startpunkte ausserhalb von cache/z14 (Kacheln dekodieren):
+pmtiles
+mapbox_vector_tile
