@@ -1,0 +1,32 @@
+name: Hoehendaten laden
+on:
+  push:
+    paths: ['.github/workflows/hoehendaten.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  dem:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Terrarium-Kacheln (z13) fuer Rheintal/Bodensee laden
+        run: |
+          python3 - <<'PY'
+          import math, os, urllib.request
+          z=13; os.makedirs('dem/13',exist_ok=True)
+          def t(lat,lon):
+              n=2**z; x=int((lon+180)/360*n)
+              y=int((1-math.asinh(math.tan(math.radians(lat)))/math.pi)/2*n); return x,y
+          x0,y0=t(47.57,9.35); x1,y1=t(47.33,9.75)
+          for x in range(x0,x1+1):
+              for y in range(y0,y1+1):
+                  u=f'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'
+                  urllib.request.urlretrieve(u,f'dem/13/{x}_{y}.png')
+          print('ok',(x1-x0+1)*(y1-y0+1))
+          PY
+      - name: Commit
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add dem && git commit -m "Hoehendaten (Terrarium z13, Mapzen/AWS Terrain Tiles)" && git push
