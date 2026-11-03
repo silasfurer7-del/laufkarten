@@ -39,7 +39,7 @@ Der Wochenplan im Kalender («Ultra-Plan», Stand Nov 2026) ist fix. Der Kalende
 | Sa | Lockerer Lauf 8 km @ 6:10–6:30 + Push |
 | So | Pull 12:00 |
 
-Erste Zeile der Antwort: Einheit und Zeit. Bei Lauftagen dazu die Vorgabe aus der Kalender-Beschreibung (Distanz, Pace, Puls) in einer Zeile, fertig. Bei Gym-Tagen folgen die PR-Chancen.
+Erste Zeile der Antwort: Einheit und Zeit. Bei Lauftagen dazu die Vorgabe aus der Kalender-Beschreibung (Distanz, Pace, Puls) in einer Zeile, und **immer die Laufkarte** (siehe unten), egal ob langer Lauf, lockerer Lauf oder Intervalle. Ohne Nachfrage, ohne Erklärung, einfach erzeugen und zeigen. Bei Gym-Tagen folgen die PR-Chancen.
 
 Strava-Workouts heissen «Push», «Pull (Rücken/Arme)», «LEG» (manchmal «Nachmittag Workout 💪», dann am Inhalt erkennen: Brustpresse = Push, Rudern/Latzug = Pull, Beinpresse = Leg). Für die PR-Chancen das letzte Workout der gleichen Art nehmen.
 
@@ -73,6 +73,8 @@ Frage: «Was steht am Mittwoch an?»
 
 ```
 **Mi: Langer Lauf 12 km, 17:00** · 6:30–7:00/km, Puls unter 154, Steigungen gehen, Stirnlampe.
+[karte0.png]
+11.6 km, ↑291 Hm, Pfad/Weg 44 %
 ```
 
 ## Laufen
@@ -83,7 +85,7 @@ Frage: «Was steht am Mittwoch an?»
 
 ## Laufkarte / Rundkurs-Vorschlag
 
-Repo `silasfurer7-del/laufkarten`, ein Befehl, 10 bis 30 Sekunden. Keine eigene Routensuche bauen, keine Kartenbibliotheken ausprobieren.
+Kommt **bei jedem Lauftag automatisch** mit, und natürlich wenn er explizit eine Karte will. Repo `silasfurer7-del/laufkarten`, ein Befehl, 10 bis 30 Sekunden. Keine eigene Routensuche bauen, keine Kartenbibliotheken ausprobieren.
 
 ```bash
 git clone -q --depth 1 https://github.com/silasfurer7-del/laufkarten
@@ -92,7 +94,7 @@ python3 laufkarten/scripts/karte.py --start 47.45131,9.55342 --km 12 --n 3 --nam
 ```
 
 - `--start lat,lon`: Standard ist Wolfhalden. Bekannte Startpunkte: Wolfhalden 47.45131,9.55342 · Heiden 47.4427,9.5333 · St. Margrethen 47.4527,9.6375 · St. Gallen 47.4245,9.3767.
-- `--km`: Ziel-Länge, bei «langer Lauf» die Distanz aus dem Kalender nehmen. `--climb 1` für flach, `--climb 0` wenn Höhenmeter egal sind (Standard 0.5).
-- `--n 3`: drei Varianten (karte0.png ist die beste). `--no-render` für nur Kennzahlen.
+- `--km`: Distanz aus dem Kalender (bei Intervallen die Gesamtdistanz: Einlaufen + Intervalle + Auslaufen, z. B. 6×400 m ≈ 7 km). `--climb 1` für flach, `--climb 0` wenn Höhenmeter egal sind (Standard 0.5).
+- `--n 1` für den Tagesvorschlag (eine Karte reicht), `--n 3` nur wenn er Varianten will. `--no-render` für nur Kennzahlen.
 - Startpunkte ausserhalb des Cache brauchen zusätzlich `pip install -q pmtiles mapbox_vector_tile` (das Skript sagt es, wenn es fehlt).
 - Ausgabe: `karte.png` (Karte + Höhenprofil) und `karte.gpx`. Die PNGs direkt zeigen, dazu die Kennzahlen-Zeile des Skripts (km, Hm, doppelt gelaufen, Pfadanteil). Nichts weiter beschreiben.
