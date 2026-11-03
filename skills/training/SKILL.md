@@ -1,6 +1,6 @@
 ---
 name: "training"
-description: "Kurze, schnelle Antworten zu Silas' Training: was heute/am Freitag ansteht (Ultra-Plan im Google Calendar), wo im Gym ein PR drin liegt (Push/Pull/Beine aus Hevy via Strava), wie die letzten Läufe waren, Laufkarte mit Rundkurs-Vorschlag. Bei jeder Frage zu Training, Workout, Gym, PR, Lauf, Pace, Strava oder Laufkarte nutzen, auch wenn nur ein Wochentag genannt wird."
+description: "Silas' Training. IMMER zuerst lesen, sobald es um Training, Workout, Gym, Push/Pull/Beine, PR, Lauf, Pace, Intervalle, Strava, Hevy, Laufkarte oder Rundkurs geht, und auch bei jeder Frage, was an einem Tag oder Wochentag ansteht («was steht am Freitag an», «was hab ich heute»). Liefert kurze Antworten: Einheit aus dem Ultra-Plan (Google Calendar), PR-Chancen aus Strava, Laufkarte per Befehl."
 ---
 
 # Training (Kraft + Laufen)
