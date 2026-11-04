@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """Laufkarte in einem Befehl: Rundkurs suchen, Karte + Hoehenprofil + GPX schreiben.
 
-    python3 scripts/karte.py --start 47.45131,9.55342 --km 12 [--climb 0.5] [--n 3] [--name "Heiden Runde"] [--out karte]
+    python3 scripts/karte.py --start wolfhalden --km 12 --typ lang [--n 3] [--name "Heiden Runde"] [--out karte]
+
+--start: Ortsname (wolfhalden, heiden, margrethen, eselschwanz, stgallen, rheineck) oder lat,lon.
+--typ: locker / lang / intervall steuert Hoehenmeter- und Pfad-Strafe. Ohne --seed wechselt die Runde jede Kalenderwoche.
 
 Ausgabe pro Variante: <out><i>.png (Karte + Profil), <out><i>.gpx, und eine Zeile mit
 Laenge / Hoehenmetern / doppelt gelaufenen Metern / Pfadanteil. Variante 0 ist die beste.
@@ -179,6 +182,8 @@ def _astar(adj, xy, src, dst, used):
                 g[v] = ng; prev[v] = u; heapq.heappush(pq, (ng + h(v), v))
     return None
 
+PFAD_STRAFE = 0.0
+
 def search(S, start, T, climb, iters, seed):
     import networkx as nx
     H = {n: elev(*n) for n in S.nodes}
@@ -219,7 +224,8 @@ def search(S, start, T, climb, iters, seed):
         for a, b in zip(seq, seq[1:]):
             g = geom(S, a, b); route += g if not route else g[1:]
         up = sum(max(0, H[b] - H[a]) for a, b in zip(seq, seq[1:]))
-        score = abs(L - T) / 100 + over / 100 + up / 15 + kinds.get('primary', 0) / 150
+        pfad = kinds.get('path', 0) + kinds.get('track', 0)
+        score = abs(L - T) / 100 + over / 100 + up / 15 + kinds.get('primary', 0) / 150 + pfad * PFAD_STRAFE
         best.append(dict(score=score, L=L, over=over, up=up, kinds=dict(kinds), route=route))
     best.sort(key=lambda r: r['score'])
     # aehnliche Varianten (gleiche Kanten) nicht doppelt
@@ -328,20 +334,31 @@ def render(feats, route, L, out, name, profile):
     open(out + '.gpx', 'w').write(s)
 
 # ---------------------------------------------------------------- main
+ORTE = {'wolfhalden': (47.45131, 9.55342), 'heiden': (47.4427, 9.5333), 'margrethen': (47.4527, 9.6375),
+        'eselschwanz': (47.4650, 9.6450), 'stgallen': (47.4245, 9.3767), 'rheineck': (47.4660, 9.5910)}
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument('--start', default='47.45131,9.55342', help='lat,lon (Standard: Wolfhalden)')
+    ap.add_argument('--start', default='wolfhalden', help='lat,lon oder Name: ' + ', '.join(ORTE))
     ap.add_argument('--km', type=float, default=12)
     ap.add_argument('--climb', type=float, default=0.5, help='Hoehenmeter-Strafe pro m (0 = egal, 1 = sehr flach)')
     ap.add_argument('--n', type=int, default=1, help='Anzahl Varianten')
     ap.add_argument('--iters', type=int, default=400)
-    ap.add_argument('--seed', type=int, default=2)
+    ap.add_argument('--seed', type=int, default=None, help='Standard: Kalenderwoche, damit jede Woche eine andere Runde kommt')
+    ap.add_argument('--typ', choices=['locker', 'lang', 'intervall'], default=None,
+                    help='locker: wenig Hm; lang: Huegel erlaubt; intervall: flach und wenig Pfad')
     ap.add_argument('--name', default=None)
     ap.add_argument('--out', default='karte')
     ap.add_argument('--no-render', action='store_true', help='nur suchen und Kennzahlen ausgeben')
     a = ap.parse_args()
     t0 = time.time()
-    start = tuple(map(float, a.start.split(','))); T = a.km * 1000
+    key = a.start.lower().replace('st. ', '').replace(' ', '')
+    start = ORTE[key] if key in ORTE else tuple(map(float, a.start.split(',')))
+    T = a.km * 1000
+    if a.typ:
+        a.climb = {'locker': 0.7, 'lang': 0.3, 'intervall': 1.5}[a.typ]
+        global PFAD_STRAFE; PFAD_STRAFE = 1 / 300 if a.typ == 'intervall' else 0.0
+    if a.seed is None: a.seed = time.localtime().tm_yday // 7
     cx, cy = map(int, deg2num(*start))
     radius = T / 2.2
     r = max(2, math.ceil(radius / 1600))

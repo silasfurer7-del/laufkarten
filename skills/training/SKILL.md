@@ -1,13 +1,13 @@
 ---
 name: "training"
-description: "Silas' Training. IMMER zuerst lesen, sobald es um Training, Workout, Gym, Push/Pull/Beine, PR, Lauf, Pace, Intervalle, Strava, Hevy, Laufkarte oder Rundkurs geht, und auch bei jeder Frage, was an einem Tag oder Wochentag ansteht («was steht am Freitag an», «was hab ich heute»). Liefert kurze Antworten: Einheit aus dem Ultra-Plan (Google Calendar), PR-Chancen aus Strava, Laufkarte per Befehl."
+description: "Silas' Training. IMMER zuerst lesen, sobald es um Training, Workout, Gym, Push/Pull/Beine, PR, Lauf, Pace, Intervalle, Strava, Hevy, Laufkarte, Rundkurs, Wochenplan oder Ultra geht, und auch bei jeder Frage, was an einem Tag, Wochentag oder in dieser Woche ansteht («was steht am Freitag an», «was hab ich heute», «wie war mein Lauf», «wie läuft's im Gym»). Liefert kurze Antworten: Einheit aus dem Ultra-Plan (Google Calendar), PR-Chancen aus Strava, Laufkarte automatisch bei jedem Lauftag."
 ---
 
 # Training (Kraft + Laufen)
 
 ## Grundregel: schnell und kurz
 
-Silas will keine Übungslisten und keine Satz-für-Satz-Wiederholung. Er will wissen **was ansteht** und **wo er angreifen kann**. Antwort in 4 bis 8 Zeilen, Deutsch, du-Form, keine Einleitung, kein Datum als Überschrift, keine Erklärung, warum etwas wegfällt, keine Rückfrage am Schluss.
+Silas will keine Übungslisten und keine Satz-für-Satz-Wiederholung. Er will wissen **was ansteht**, **wo er angreifen kann** und bei Läufen **die Karte**. Antwort in 4 bis 8 Zeilen, Deutsch, du-Form, keine Einleitung, kein Datum als Überschrift, keine Erklärung, warum etwas wegfällt, keine Rückfrage am Schluss.
 
 Nie machen, ausser er fragt ausdrücklich («alle Übungen», «Details», «was hab ich genau gemacht»):
 - alle Übungen eines Workouts aufzählen
@@ -16,34 +16,38 @@ Nie machen, ausser er fragt ausdrücklich («alle Übungen», «Details», «was
 
 ## Daten holen: höchstens zwei Aufrufe
 
-1. **Google Calendar** `list_events` nur für den gefragten Tag (startTime und endTime auf diesen Tag). Dort steht der Ultra-Plan mit Zeiten und Vorgaben.
-2. **Strava** `list_activities(first=15, use_preferred_units=true)`, nur wenn ein Gym-Workout ansteht (für die PR-Chancen) oder er nach Läufen fragt.
+1. **Google Calendar** `list_events` nur für den gefragten Tag (startTime und endTime auf diesen Tag), bei Wochenfragen für die Woche. Dort steht der Ultra-Plan mit Zeiten, Vorgaben und manchmal einem Ort.
+2. **Strava** `list_activities(first=15, use_preferred_units=true)`, nur wenn ein Gym-Workout ansteht (PR-Chancen), er nach Läufen fragt oder den Gym-Fortschritt will.
 
 Sonst nichts:
 - Die Beschreibung jedes Kraft-Workouts in Strava enthält schon alle Hevy-Sätze («Übung / Set 1: 45 kg x 10 [Warm-up]»). Darum **nie** `get_strength_workout_details` aufrufen, das kostet nur Zeit.
 - Keine weiteren Strava-Seiten laden, ausser die Frage betrifft mehr als die letzten 3 Wochen.
-- `get_athlete_best_efforts` nur, wenn er nach Lauf-Bestzeiten fragt.
+- `get_athlete_best_efforts` nur, wenn er nach Lauf-Bestzeiten über alle Zeiten fragt. Ob ein einzelner Lauf einen PR brachte, steht schon in `pr_count` der Aktivität.
 - Profil nicht abrufen; bekannt (Strava-Fokus, Stand Nov 2026): St. Gallen, metrisch, Ziel 60-km-Ultra mit konstanter 6:00/km bis Mai 2027.
 
-## Was steht an?
+## Wochenplan (Ultra-Plan, fix)
 
-Der Wochenplan im Kalender («Ultra-Plan», Stand Nov 2026) ist fix. Der Kalender-Aufruf bestätigt ihn und liefert Zeit und Vorgaben:
+| Tag | Einheit | Karte |
+|---|---|---|
+| Mo | Intervalle (z. B. 6×400 m @ 4:15) | `--typ intervall --start margrethen` |
+| Di | Push 17:30–20:00 | – |
+| Mi | Langer Lauf 12–14 km @ 6:30–7:00, Puls < 154 | `--typ lang --start wolfhalden` |
+| Do | Pull 17:30–20:00 | – |
+| Fr | Beine 17:30–20:00 | – |
+| Sa | Lockerer Lauf 8 km @ 6:10–6:30 + Push | `--typ locker --start wolfhalden` |
+| So | Pull 12:00 | – |
 
-| Tag | Einheit |
-|---|---|
-| Mo | Intervalle (z. B. 6×400 m @ 4:15) |
-| Di | Push 17:30–20:00 |
-| Mi | Langer Lauf 12–14 km @ 6:30–7:00, Puls < 154 |
-| Do | Pull 17:30–20:00 |
-| Fr | Beine 17:30–20:00 |
-| Sa | Lockerer Lauf 8 km @ 6:10–6:30 + Push |
-| So | Pull 12:00 |
+Der Kalender-Aufruf bestätigt den Plan und liefert Zeit, Vorgabe und allenfalls den Ort. Steht im Kalender ein Ort (z. B. «Eselschwanz, St. Margrethen»), diesen Start nehmen.
 
-Erste Zeile der Antwort: Einheit und Zeit. Bei Lauftagen dazu die Vorgabe aus der Kalender-Beschreibung (Distanz, Pace, Puls) in einer Zeile, und **immer die Laufkarte** (siehe unten), egal ob langer Lauf, lockerer Lauf oder Intervalle. Ohne Nachfrage, ohne Erklärung, einfach erzeugen und zeigen. Bei Gym-Tagen folgen die PR-Chancen.
+## Was steht an? (ein Tag)
 
-Strava-Workouts heissen «Push», «Pull (Rücken/Arme)», «LEG» (manchmal «Nachmittag Workout 💪», dann am Inhalt erkennen: Brustpresse = Push, Rudern/Latzug = Pull, Beinpresse = Leg). Für die PR-Chancen das letzte Workout der gleichen Art nehmen.
+Erste Zeile: Einheit und Zeit.
 
-## PR-Chancen (das Wichtigste)
+**Lauftag** (egal ob lang, locker, Intervalle oder Test): dazu die Vorgabe aus der Kalender-Beschreibung (Distanz, Pace, Puls) in derselben Zeile, dann **immer die Laufkarte**, ohne Nachfrage, ohne Erklärung. Distanz = Gesamtdistanz aus dem Kalender (bei Intervallen Einlaufen + Intervalle + Auslaufen, 6×400 m ≈ 7 km, 5×800 m ≈ 8 km).
+
+**Gym-Tag**: danach die PR-Chancen. Strava-Workouts heissen «Push», «Pull (Rücken/Arme)», «LEG» (manchmal «Nachmittag Workout 💪», dann am Inhalt erkennen: Brustpresse = Push, Rudern/Latzug = Pull, Beinpresse = Leg). Das letzte Workout der gleichen Art nehmen.
+
+## PR-Chancen
 
 Pro Workout nur die 2 bis 4 Übungen nennen, bei denen ein PR realistisch ist. Nur Arbeitssätze zählen, Sätze mit [Warm-up] ignorieren.
 
@@ -56,10 +60,46 @@ Kein Kandidat: oberster Satz mit [Failure] und weniger Wiederholungen als beim M
 
 Format pro Zeile: `Übung: zuletzt Gewicht × Wdh → Vorschlag`. Zuletzt und Vorschlag reichen, keine Historie.
 
-### Beispiele
+## Weitere Fragen
 
-Frage: «Was steht am Freitag an?»
+**«Was steht diese Woche an»**: Kalender für die ganze Woche, dann 7 Zeilen `Tag: Einheit, Zeit`, Lauftage mit Vorgabe. Danach die Karten für alle Lauftage der Woche, je eine (`--n 1`), nacheinander mit einem Wort als Titel (Mo Intervalle, Mi Lang, Sa Locker).
 
+**«Wie war mein Lauf» / «letzter Lauf»**: Strava, letzter Run, und den Kalender-Eintrag dieses Tages. Eine Zeile Urteil: Pace im Fenster oder nicht (Abweichung in s/km), Hm, relative Anstrengung, «1 PR» wenn `pr_count` > 0. Dann eine Zeile Tipp, höchstens. Beispiel:
+```
+Mi 12 km in 6:22/km · Ziel 6:30–7:00 → 8 s zu schnell, 117 Hm, Anstrengung 48, 1 PR.
+Nächstes Mal die ersten 3 km bewusst bei 6:45 halten.
+```
+
+**«Wie läuft's im Gym» / «Fortschritt»**: Strava, pro Art (Push, Pull, Leg) das letzte und das Workout von vor etwa 3 Wochen vergleichen, nur oberste Arbeitssätze. Eine Zeile pro Art mit ↑ (Gewicht oder Wdh rauf) und → (gleich), nur Übungsnamen, keine Zahlenreihen:
+```
+Push: ↑ Brustpresse, Butterfly · → Schulterpresse
+Pull: ↑ Rudern, Latzug, Bizeps · → Seitheben
+Leg: ↑ Beinpresse, Beinstrecken · → Beinbeugen
+```
+
+**«Wann ist der Ultra» / Countdown**: `search_events` im Kalender nach «Ultra». Eine Zeile: Datum, Tage bis dahin, Wochen-km laut Plan. Nichts erfinden, wenn kein Eintrag da ist.
+
+**Lauf-Bestzeiten**: nur über `get_athlete_best_efforts`, nicht aus den Aktivitäten schätzen.
+
+## Laufkarte
+
+Bei jedem Lauftag automatisch, und natürlich wenn er explizit eine Karte will. Repo `silasfurer7-del/laufkarten`, ein Befehl, 5 bis 30 Sekunden. Keine eigene Routensuche bauen, keine Kartenbibliotheken ausprobieren.
+
+```bash
+git clone -q --depth 1 https://github.com/silasfurer7-del/laufkarten
+pip install -q networkx matplotlib pillow
+python3 laufkarten/scripts/karte.py --start wolfhalden --km 14 --typ lang --name "Langer Lauf"
+```
+
+- `--start`: Ortsname `wolfhalden` (Standard), `heiden`, `margrethen`, `eselschwanz`, `rheineck`, `stgallen`, oder `lat,lon`.
+- `--typ`: `intervall` (flach, wenig Pfad), `lang` (Hügel erlaubt), `locker` (wenig Hm). Ersetzt `--climb`.
+- Ohne `--seed` kommt jede Kalenderwoche automatisch eine andere Runde. Will er eine Alternative: `--seed 7` oder `--n 3`.
+- Startpunkte ausserhalb des Cache brauchen zusätzlich `pip install -q pmtiles mapbox_vector_tile` (das Skript sagt es, wenn es fehlt).
+- Ausgabe: `karte.png` (Karte + Höhenprofil) und `karte.gpx`. Das PNG direkt zeigen, dazu die Kennzahlen-Zeile des Skripts (km, Hm, doppelt gelaufen, Pfadanteil). Nichts weiter beschreiben.
+
+## Beispiele
+
+«Was steht am Freitag an?»
 ```
 **Fr: Beine, 17:30–20:00** (zuletzt Do 30.10.)
 PR-Chancen:
@@ -69,32 +109,9 @@ PR-Chancen:
 Beinstrecken 60 kg halten (× 12 war Failure), Beinbeugen halten.
 ```
 
-Frage: «Was steht am Mittwoch an?»
-
+«Was steht am Mittwoch an?»
 ```
-**Mi: Langer Lauf 12 km, 17:00** · 6:30–7:00/km, Puls unter 154, Steigungen gehen, Stirnlampe.
-[karte0.png]
-11.6 km, ↑291 Hm, Pfad/Weg 44 %
+**Mi: Langer Lauf 14 km, 17:00** · 6:30–7:00/km, Puls unter 154, Steigungen gehen, Stirnlampe.
+[karte.png]
+13.9 km, ↑445 Hm, Pfad/Weg 25 %
 ```
-
-## Laufen
-
-- «Wie war der Lauf» / «letzte Läufe»: Distanz, Pace, Hm, relative Anstrengung in einer Zeile pro Lauf, maximal 3 Läufe.
-- Einordnung immer an der Kalender-Vorgabe und am Ziel 6:00/km über 60 km messen. Ist die Pace der lockeren Läufe im vorgegebenen Fenster, passt es.
-- Lauf-PRs nur über `get_athlete_best_efforts`, nicht aus den Aktivitäten schätzen.
-
-## Laufkarte / Rundkurs-Vorschlag
-
-Kommt **bei jedem Lauftag automatisch** mit, und natürlich wenn er explizit eine Karte will. Repo `silasfurer7-del/laufkarten`, ein Befehl, 10 bis 30 Sekunden. Keine eigene Routensuche bauen, keine Kartenbibliotheken ausprobieren.
-
-```bash
-git clone -q --depth 1 https://github.com/silasfurer7-del/laufkarten
-pip install -q networkx matplotlib pillow
-python3 laufkarten/scripts/karte.py --start 47.45131,9.55342 --km 12 --n 3 --name "Heiden Runde"
-```
-
-- `--start lat,lon`: Standard ist Wolfhalden. Bekannte Startpunkte: Wolfhalden 47.45131,9.55342 · Heiden 47.4427,9.5333 · St. Margrethen 47.4527,9.6375 · St. Gallen 47.4245,9.3767.
-- `--km`: Distanz aus dem Kalender (bei Intervallen die Gesamtdistanz: Einlaufen + Intervalle + Auslaufen, z. B. 6×400 m ≈ 7 km). `--climb 1` für flach, `--climb 0` wenn Höhenmeter egal sind (Standard 0.5).
-- `--n 1` für den Tagesvorschlag (eine Karte reicht), `--n 3` nur wenn er Varianten will. `--no-render` für nur Kennzahlen.
-- Startpunkte ausserhalb des Cache brauchen zusätzlich `pip install -q pmtiles mapbox_vector_tile` (das Skript sagt es, wenn es fehlt).
-- Ausgabe: `karte.png` (Karte + Höhenprofil) und `karte.gpx`. Die PNGs direkt zeigen, dazu die Kennzahlen-Zeile des Skripts (km, Hm, doppelt gelaufen, Pfadanteil). Nichts weiter beschreiben.

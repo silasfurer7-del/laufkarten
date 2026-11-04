@@ -6,7 +6,7 @@ Laufrouten-Karten (Rheintal/Bodensee) und der Trainings-Skill von Silas.
 
 ```bash
 pip install -q -r requirements.txt
-python3 scripts/karte.py --start 47.45131,9.55342 --km 12 --n 3 --name "Heiden Runde"
+python3 scripts/karte.py --start wolfhalden --km 12 --typ lang --name "Heiden Runde"
 ```
 
 Ergebnis: `karte0.png` … (Karte + Höhenprofil), `karte0.gpx` …, eine Kennzahlen-Zeile pro Variante
