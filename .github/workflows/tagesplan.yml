@@ -1,0 +1,33 @@
+name: Tagesplan (Karten fuer heute vorbereiten)
+# Laeuft jede Nacht und legt Karten + Text fuer den Tag auf den Branch `heute`.
+# Grundlage ist der feste Wochenplan (Ultra-Plan). Der Claude-Nachtjob um 00:01 ueberschreibt
+# das Ergebnis mit Kalender-Details und PR-Chancen, wenn er laeuft.
+on:
+  schedule:
+    - cron: '45 22 * * *'   # 22:45 UTC = 23:45 MEZ (Winter) bzw. 00:45 MESZ (Sommer); der Schritt unten waehlt den richtigen Tag
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install -q networkx matplotlib pillow
+      - name: Tag bestimmen und Karten rechnen
+        env: { TZ: Europe/Zurich, GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}' }
+        run: |
+          # Der Job laeuft kurz vor oder nach Mitternacht: immer den naechsten Tag planen, dessen 00:01 noch kommt
+          D=$(date -d 'tomorrow' +%F); [ "$(date +%H)" -lt 12 ] && D=$(date +%F)
+          W=$(date -d "$D" +%u)   # 1 = Mo
+          case $W in
+            1) python3 scripts/heute.py --datum $D --einheit "Mo: Intervalle, 17:30" --vorgabe "2 km einlaufen, Intervalle laut Kalender, 1–2 km auslaufen" --km 7 --typ intervall --start margrethen --push ;;
+            2) printf 'PR-Chancen: im Chat fragen (Strava).\n' > t.md; python3 scripts/heute.py --datum $D --einheit "Di: Push, 17:30–20:00" --text t.md --push ;;
+            3) python3 scripts/heute.py --datum $D --einheit "Mi: Langer Lauf, 17:00" --vorgabe "6:30–7:00/km, Puls unter 154, Steigungen gehen, Stirnlampe" --km 14 --typ lang --start wolfhalden --push ;;
+            4) printf 'PR-Chancen: im Chat fragen (Strava).\n' > t.md; python3 scripts/heute.py --datum $D --einheit "Do: Pull, 17:30–20:00" --text t.md --push ;;
+            5) printf 'PR-Chancen: im Chat fragen (Strava).\n' > t.md; python3 scripts/heute.py --datum $D --einheit "Fr: Beine, 17:30–20:00" --text t.md --push ;;
+            6) python3 scripts/heute.py --datum $D --einheit "Sa: Lockerer Lauf 8 km + Push, 12:00" --vorgabe "6:10–6:30/km, Puls unter 154, danach Push" --km 8 --typ locker --start wolfhalden --push ;;
+            7) printf 'PR-Chancen: im Chat fragen (Strava).\n' > t.md; python3 scripts/heute.py --datum $D --einheit "So: Pull, 12:00" --text t.md --push ;;
+          esac
