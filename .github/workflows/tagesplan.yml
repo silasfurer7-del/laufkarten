@@ -1,5 +1,5 @@
 name: Tagesplan (Karten fuer heute vorbereiten)
-# Laeuft jede Nacht und legt Karten + Text fuer den Tag auf den Branch `heute`.
+# Laeuft jede Nacht und legt Karten + Text fuer den Tag auf den Branch `heute` (manuell: Actions -> Run workflow).
 # Grundlage ist der feste Wochenplan (Ultra-Plan). Der Claude-Nachtjob um 00:01 ueberschreibt
 # das Ergebnis mit Kalender-Details und PR-Chancen, wenn er laeuft.
 on:
