@@ -21,5 +21,5 @@ Beinstrecken 60 kg halten (× 12 war Failure), Beinbeugen halten.
 LÄUFE: «wie war der Lauf» = Distanz, Pace, Hm, Anstrengung in einer Zeile pro Lauf, max. 3. Lauf-PRs nur über get_athlete_best_efforts.
 
 LAUFKARTE: Repo silasfurer7-del/laufkarten, ein Befehl, nichts selber bauen:
-git clone -q --depth 1 https://github.com/silasfurer7-del/laufkarten && pip install -q networkx matplotlib pillow && python3 laufkarten/scripts/karte.py --start 47.45131,9.55342 --km 12 --n 3
-Startpunkte: Wolfhalden 47.45131,9.55342 · Heiden 47.4427,9.5333 · St. Margrethen 47.4527,9.6375 · St. Gallen 47.4245,9.3767. --climb 1 für flach. PNGs zeigen, Kennzahlen-Zeile dazu, sonst nichts.
+git clone -q --depth 1 https://github.com/silasfurer7-del/laufkarten && pip install -q networkx matplotlib pillow && python3 laufkarten/scripts/karte.py --start wolfhalden --km 12 --typ lang
+--start: wolfhalden, heiden, margrethen, eselschwanz, rheineck, stgallen. --typ: intervall (flach, Start margrethen), lang, locker. Runde wechselt automatisch jede Woche. PNGs zeigen, Kennzahlen-Zeile dazu, sonst nichts.

@@ -5,15 +5,17 @@ dazu der Trainings-Skill (`skills/training/SKILL.md`).
 
 ```bash
 pip install -q -r requirements.txt
-python3 scripts/karte.py --start 47.45131,9.55342 --km 12 --n 3 --name "Heiden Runde"
+python3 scripts/karte.py --start wolfhalden --km 12 --typ lang --name "Heiden Runde"
 ```
 
 | Option | Bedeutung |
 |---|---|
-| `--start lat,lon` | Startpunkt (Standard Wolfhalden) |
+| `--start` | Ortsname (wolfhalden, heiden, margrethen, eselschwanz, rheineck, stgallen) oder lat,lon |
+| `--typ` | intervall (flach), lang (Hügel ok), locker (wenig Hm); ersetzt `--climb` |
 | `--km 12` | Ziel-Länge |
 | `--climb 0.5` | Höhenmeter-Strafe: 0 = egal, 1 = möglichst flach |
 | `--n 3` | Anzahl Varianten, `karte0.png` ist die beste |
+| `--seed` | Standard: Kalenderwoche, darum jede Woche eine andere Runde |
 | `--no-render` | nur Kennzahlen, keine Bilder |
 
 Laufzeit rund 8 s (8 km) bis 30 s (20 km). Der Kachel-Cache in `cache/z14/` deckt den Raum
