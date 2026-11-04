@@ -14,6 +14,19 @@ Nie machen, ausser er fragt ausdrücklich («alle Übungen», «Details», «was
 - einzelne Sätze aufzählen
 - das letzte Workout nacherzählen
 
+## Zuerst: der fertige Tagesplan (Branch `heute`)
+
+Jede Nacht um 00:01 bereitet ein Job den Tag vor und legt alles auf den Branch `heute` im Repo. Darum bei jeder Frage zu **heute** zuerst das hier, dauert 1 Sekunde:
+
+```bash
+curl -sL https://raw.githubusercontent.com/silasfurer7-del/laufkarten/heute/heute.md
+```
+
+- Erste Zeile ist `# YYYY-MM-DD`. Stimmt das Datum mit heute überein, ist das die Antwort: den Text 1:1 übernehmen (ohne die `#`-Zeile), bei einem Lauftag dazu die Karte `heute_normal.png` laden und zeigen:
+  `curl -sLO https://raw.githubusercontent.com/silasfurer7-del/laufkarten/heute/heute_normal.png`
+- Will er eine bestimmte Art («nur Strasse», «mit Höhenmetern», «flach», «Natur»/«kein Dorf»), die passende Datei zeigen: `heute_strasse.png`, `heute_huegel.png`, `heute_flach.png`, `heute_natur.png`. Alle vier auf einmal, wenn er «alle Varianten» sagt. GPX gleichnamig mit `.gpx`.
+- Stimmt das Datum nicht oder die Frage betrifft einen anderen Tag: normal weiter wie unten (Kalender, Strava, Karte selber rechnen).
+
 ## Daten holen: höchstens zwei Aufrufe
 
 1. **Google Calendar** `list_events` nur für den gefragten Tag (startTime und endTime auf diesen Tag), bei Wochenfragen für die Woche. Dort steht der Ultra-Plan mit Zeiten, Vorgaben und manchmal einem Ort.
@@ -81,7 +94,7 @@ Leg: ↑ Beinpresse, Beinstrecken · → Beinbeugen
 
 **Lauf-Bestzeiten**: nur über `get_athlete_best_efforts`, nicht aus den Aktivitäten schätzen.
 
-## Laufkarte
+## Laufkarte (selber rechnen, wenn kein fertiger Tagesplan passt)
 
 Bei jedem Lauftag automatisch, und natürlich wenn er explizit eine Karte will. Repo `silasfurer7-del/laufkarten`, ein Befehl, 5 bis 30 Sekunden. Keine eigene Routensuche bauen, keine Kartenbibliotheken ausprobieren.
 
@@ -93,6 +106,7 @@ python3 laufkarten/scripts/karte.py --start wolfhalden --km 14 --typ lang --name
 
 - `--start`: Ortsname `wolfhalden` (Standard), `heiden`, `margrethen`, `eselschwanz`, `rheineck`, `stgallen`, oder `lat,lon`.
 - `--typ`: `intervall` (flach, wenig Pfad), `lang` (Hügel erlaubt), `locker` (wenig Hm). Ersetzt `--climb`.
+- `--profil`: `strasse` (nur Asphalt), `huegel` (viele Hm), `flach`, `natur` (kein Dorf). `--plan` rechnet alle fünf auf einmal.
 - Ohne `--seed` kommt jede Kalenderwoche automatisch eine andere Runde. Will er eine Alternative: `--seed 7` oder `--n 3`.
 - Startpunkte ausserhalb des Cache brauchen zusätzlich `pip install -q pmtiles mapbox_vector_tile` (das Skript sagt es, wenn es fehlt).
 - Ausgabe: `karte.png` (Karte + Höhenprofil) und `karte.gpx`. Das PNG direkt zeigen, dazu die Kennzahlen-Zeile des Skripts (km, Hm, doppelt gelaufen, Pfadanteil). Nichts weiter beschreiben.

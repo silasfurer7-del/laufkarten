@@ -21,6 +21,12 @@ python3 scripts/karte.py --start wolfhalden --km 12 --typ lang --name "Heiden Ru
 Laufzeit rund 8 s (8 km) bis 30 s (20 km). Der Kachel-Cache in `cache/z14/` deckt den Raum
 Wolfhalden/Heiden/St. Margrethen ab; andere Startpunkte dekodiert das Skript einmalig aus den PMTiles.
 
+## Tagesplan (Branch `heute`)
+
+`.github/workflows/tagesplan.yml` rechnet jede Nacht die Karten für den nächsten Tag (fünf Profile: normal,
+nur Strasse, Höhenmeter, flach, Natur) und legt sie mit `scripts/heute.py` auf den Branch `heute`:
+`https://raw.githubusercontent.com/silasfurer7-del/laufkarten/heute/heute.md`. Im Chat holt der Skill nur diese Dateien.
+
 ## Daten
 
 - `rheintal-bodensee.pmtiles`: Shortbread-Vektorkacheln (© OpenStreetMap-Mitwirkende, ODbL; Extrakt via BBBike),

@@ -17,6 +17,11 @@ Ergebnis: `karte0.png` … (Karte + Höhenprofil), `karte0.gpx` …, eine Kennza
   dafür braucht es `pmtiles` und `mapbox_vector_tile` (in `requirements.txt`). Neue Cache-Dateien mit einchecken.
 - Fertige Karten nur zeigen, nicht beschreiben. Kennzahlen-Zeile genügt.
 
+## Tagesplan
+
+Branch `heute` (Workflow `tagesplan.yml` + `scripts/heute.py`): fertige Karten und Text für den Tag.
+Vor jeder Frage zu «heute» zuerst `curl -sL https://raw.githubusercontent.com/silasfurer7-del/laufkarten/heute/heute.md`.
+
 ## Trainings-Fragen (Kraft, Laufen, PRs)
 
 Regeln in `skills/training/SKILL.md`: ein Strava-Aufruf (`list_activities`, 15 Einträge), kurze Antwort,

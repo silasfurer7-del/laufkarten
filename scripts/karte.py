@@ -184,11 +184,34 @@ def _astar(adj, xy, src, dst, used):
 
 PFAD_STRAFE = 0.0
 
-def search(S, start, T, climb, iters, seed):
+# Routen-Profile: cost = Faktor pro Strassenart (auf COST drauf), climb = Hm-Strafe pro m,
+# up = Gewicht der Hoehenmeter im Score (negativ = Huegel belohnen), pfad = Strafe fuer Pfad/Weg
+DORF = ('residential', 'living_street', 'service', 'pedestrian')
+PROFILE = {
+    'normal':  dict(cost={}, climb=None, up=1 / 15, score={}, label='Normal'),
+    'strasse': dict(cost={'path': 3, 'track': 3, 'footway': 1.3}, climb=None, up=1 / 15,
+                    score={'path': 1 / 60, 'track': 1 / 60}, label='Nur Strasse'),
+    'huegel':  dict(cost={}, climb=-0.35, up=-1 / 25, score={}, label='Höhenmeter'),
+    'flach':   dict(cost={}, climb=2.0, up=1 / 4, score={}, label='Flach'),
+    'natur':   dict(cost={k: 4 for k in DORF} | {'primary': 5, 'secondary': 4, 'tertiary': 3, 'unclassified': 1.5,
+                          'path': 0.8, 'track': 0.8, 'cycleway': 0.9},
+                    climb=None, up=1 / 15, score={k: 1 / 40 for k in DORF} | {'primary': 1 / 30, 'secondary': 1 / 40, 'tertiary': 1 / 60},
+                    label='Natur'),
+}
+
+def apply_profile(S, prof):
+    """Kantengewicht w nach Profil neu berechnen (aus den Strassenarten der Kante)."""
+    c = prof['cost']
+    for a, b, d in S.edges(data=True):
+        d['w'] = sum(L * COST.get(k, 1) * c.get(k, 1) for k, L in d['kinds'].items())
+
+def search(S, start, T, climb, iters, seed, up_w=1 / 15, kind_w=None):
     import networkx as nx
+    kind_w = dict(kind_w or {})
+    if PFAD_STRAFE: kind_w = {'path': PFAD_STRAFE, 'track': PFAD_STRAFE} | kind_w
     H = {n: elev(*n) for n in S.nodes}
     for a, b, d in S.edges(data=True):
-        d['wc'] = d['w'] + climb * abs(H[a] - H[b])
+        d['wc'] = max(d['w'] * 0.3, d['w'] + climb * abs(H[a] - H[b]))
     home = min(S.nodes, key=lambda n: hav(n, start))
     dist, paths = nx.single_source_dijkstra(S, home, weight='wc')
     nodes = list(S.nodes); idx = {n: i for i, n in enumerate(nodes)}
@@ -224,8 +247,8 @@ def search(S, start, T, climb, iters, seed):
         for a, b in zip(seq, seq[1:]):
             g = geom(S, a, b); route += g if not route else g[1:]
         up = sum(max(0, H[b] - H[a]) for a, b in zip(seq, seq[1:]))
-        pfad = kinds.get('path', 0) + kinds.get('track', 0)
-        score = abs(L - T) / 100 + over / 100 + up / 15 + kinds.get('primary', 0) / 150 + pfad * PFAD_STRAFE
+        extra = sum(kinds.get(k, 0) * w for k, w in kind_w.items())
+        score = abs(L - T) / 100 + over / 100 + up * up_w + kinds.get('primary', 0) / 150 + extra
         best.append(dict(score=score, L=L, over=over, up=up, kinds=dict(kinds), route=route))
     best.sort(key=lambda r: r['score'])
     # aehnliche Varianten (gleiche Kanten) nicht doppelt
@@ -347,6 +370,9 @@ def main():
     ap.add_argument('--seed', type=int, default=None, help='Standard: Kalenderwoche, damit jede Woche eine andere Runde kommt')
     ap.add_argument('--typ', choices=['locker', 'lang', 'intervall'], default=None,
                     help='locker: wenig Hm; lang: Huegel erlaubt; intervall: flach und wenig Pfad')
+    ap.add_argument('--profil', choices=list(PROFILE), default='normal',
+                    help='normal | strasse (nur Asphalt) | huegel (viele Hm) | flach | natur (kein Dorf)')
+    ap.add_argument('--plan', action='store_true', help='alle Profile auf einmal: <out>_<profil>.png + <out>.json')
     ap.add_argument('--name', default=None)
     ap.add_argument('--out', default='karte')
     ap.add_argument('--no-render', action='store_true', help='nur suchen und Kennzahlen ausgeben')
@@ -369,20 +395,38 @@ def main():
     G = G.subgraph(max(nx.connected_components(G), key=len)).copy()
     S = contract(G)
     t2 = time.time()
-    res = search(S, start, T, a.climb, a.iters, a.seed)
-    t3 = time.time()
-    if not res:
-        print('keine Runde gefunden (anderer Startpunkt / andere Distanz?)'); sys.exit(1)
     name = a.name or f'Runde {a.km:g} km'
-    for i, rr in enumerate(res[:a.n]):
-        prof = profil(rr['route'])
-        pfad = (rr['kinds'].get('path', 0) + rr['kinds'].get('track', 0) + rr['kinds'].get('footway', 0)) / rr['L']
-        out = f"{a.out}{i if a.n > 1 else ''}"
-        if not a.no_render: render(feats, rr['route'], rr['L'], out, name, prof)
-        print(f"{out}: {rr['L']/1000:.1f} km, ↑{round(prof[2])} Hm, doppelt {round(rr['over'])} m, "
-              f"Pfad/Weg {round(pfad*100)} %, Hauptstrasse {round(rr['kinds'].get('primary',0))} m")
-    print(f"[kacheln {t1-t0:.1f}s, graph {t2-t1:.1f}s ({S.number_of_nodes()} knoten), suche {t3-t2:.1f}s, "
-          f"render {time.time()-t3:.1f}s, total {time.time()-t0:.1f}s]", file=sys.stderr)
+    profile = list(PROFILE) if a.plan else [a.profil]
+    summary = []; t_such = t_rend = 0
+    for pi, pname in enumerate(profile):
+        P = PROFILE[pname]; apply_profile(S, P)
+        climb = P['climb'] if P['climb'] is not None else a.climb
+        ts = time.time()
+        res = search(S, start, T, climb, a.iters, a.seed + 7 * pi, P['up'], P['score'])
+        t_such += time.time() - ts
+        if not res:
+            print(f'{pname}: keine Runde gefunden'); continue
+        for i, rr in enumerate(res[:a.n]):
+            prof = profil(rr['route'])
+            pfad = (rr['kinds'].get('path', 0) + rr['kinds'].get('track', 0) + rr['kinds'].get('footway', 0)) / rr['L']
+            out = a.out + (f'_{pname}' if a.plan else '') + (str(i) if a.n > 1 else '')
+            tr = time.time()
+            if not a.no_render: render(feats, rr['route'], rr['L'], out, f'{name} ({P["label"]})' if a.plan else name, prof)
+            t_rend += time.time() - tr
+            dorf = sum(rr['kinds'].get(k, 0) for k in DORF) / rr['L']
+            line = (f"{rr['L']/1000:.1f} km, ↑{round(prof[2])} Hm, doppelt {round(rr['over'])} m, "
+                    f"Pfad/Weg {round(pfad*100)} %, Dorf {round(dorf*100)} %, Hauptstrasse {round(rr['kinds'].get('primary',0))} m")
+            print(f'{out}: {line}')
+            summary.append(dict(profil=pname, label=P['label'], datei=out + '.png', gpx=out + '.gpx', km=round(rr['L'] / 1000, 1),
+                                hm=round(prof[2]), doppelt=round(rr['over']), pfad_prozent=round(pfad * 100), text=line))
+    if not summary:
+        print('keine Runde gefunden (anderer Startpunkt / andere Distanz?)'); sys.exit(1)
+    if a.plan:
+        import json
+        json.dump(dict(start=a.start, km=a.km, typ=a.typ, name=name, varianten=summary),
+                  open(a.out + '.json', 'w'), ensure_ascii=False, indent=1)
+    print(f"[kacheln {t1-t0:.1f}s, graph {t2-t1:.1f}s ({S.number_of_nodes()} knoten), suche {t_such:.1f}s, "
+          f"render {t_rend:.1f}s, total {time.time()-t0:.1f}s]", file=sys.stderr)
 
 if __name__ == '__main__':
     main()
