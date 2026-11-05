@@ -75,7 +75,16 @@ def elev(lat, lon):
     def px(xx, yy):
         k = (xx // 256, yy // 256)
         if k not in _dem:
-            _dem[k] = Image.open(os.path.join(DEM, f'{k[0]}_{k[1]}.png')).convert('RGB').load()
+            p = os.path.join(DEM, f'{k[0]}_{k[1]}.png')
+            if not os.path.exists(p):  # knapp ausserhalb der Hoehendaten: naechste vorhandene Kachel, Randpixel
+                global _demrng
+                if '_demrng' not in globals():
+                    ks = [tuple(map(int, f[:-4].split('_'))) for f in os.listdir(DEM) if f.endswith('.png')]
+                    _demrng = (min(a for a, _ in ks), max(a for a, _ in ks), min(b for _, b in ks), max(b for _, b in ks))
+                x0_, x1_, y0_, y1_ = _demrng
+                xx = min(max(xx, x0_ * 256), x1_ * 256 + 255); yy = min(max(yy, y0_ * 256), y1_ * 256 + 255)
+                return px(xx, yy)
+            _dem[k] = Image.open(p).convert('RGB').load()
         r, g, b = _dem[k][xx % 256, yy % 256]
         return r * 256 + g + b / 256 - 32768
     x0, y0 = int(X - .5), int(Y - .5); fx, fy = X - .5 - x0, Y - .5 - y0
