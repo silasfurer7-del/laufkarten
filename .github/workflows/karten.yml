@@ -1,0 +1,42 @@
+name: Karten vorrechnen (fuer die 20-Uhr-Nachricht)
+# Rechnet jeden Abend alle Laufkarten, die laut Ultra-Plan am naechsten Tag vorkommen koennen,
+# je 3 Varianten, und legt sie auf den Branch `karten` (ein Commit, Force-Push, das Repo waechst nicht).
+# Die geplante Claude-Aufgabe um 19:57 liest den Kalender und holt nur noch die passenden Bilder:
+#   https://raw.githubusercontent.com/silasfurer7-del/laufkarten/karten/<typ>-<start>-<km>/karte0.png
+# Ordner: intervall-heiden-6..9, lang-zuhause-10..16, locker-zuhause-6..10, locker-eselschwanz-6..10
+on:
+  schedule:
+    - cron: '15 17 * * *'   # 17:15 UTC = 18:15 MEZ / 19:15 MESZ
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  karten:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install -q -r requirements.txt
+      - name: Karten rechnen
+        env: { TZ: Europe/Zurich }
+        run: |
+          set -e
+          ROOT=$PWD; OUT=$ROOT/out; rm -rf $OUT; mkdir -p $OUT
+          rechne () {  # typ start-name start km
+            d=$OUT/$1-$2-$4; mkdir -p $d
+            ( cd $d && python3 $ROOT/scripts/karte.py --start $3 --km $4 --typ $1 --n 3 --name "$1 $2 $4 km" > kennzahlen.txt ) || echo "FEHLER $1-$2-$4"
+          }
+          for km in 6 7 8 9;             do rechne intervall heiden      heiden           $km; done
+          for km in 10 11 12 13 14 15 16; do rechne lang      zuhause     47.45131,9.55342 $km; done
+          for km in 6 7 8 9 10;          do rechne locker    zuhause     47.45131,9.55342 $km; done
+          for km in 6 7 8 9 10;          do rechne locker    eselschwanz eselschwanz      $km; done
+          date '+%F %H:%M' > $OUT/erstellt.txt
+          ls $OUT
+      - name: Auf Branch `karten` legen
+        run: |
+          cd out
+          git init -q -b karten
+          git config user.name laufkarten; git config user.email laufkarten@users.noreply.github.com
+          git add -A; git commit -q -m "Karten $(date +%F)"
+          git push -q --force "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}" karten:karten
