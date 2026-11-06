@@ -1,0 +1,62 @@
+{
+ "datum": "2026-11-07",
+ "einheit": "Sa: Lockerer Lauf 8 km + Push, 12:00",
+ "vorgabe": "6:10–6:30/km, Puls unter 154, danach Push",
+ "varianten": [
+  {
+   "profil": "normal",
+   "label": "Normal",
+   "datei": "/home/runner/work/laufkarten/laufkarten/heute/heute_normal.png",
+   "gpx": "/home/runner/work/laufkarten/laufkarten/heute/heute_normal.gpx",
+   "km": 7.9,
+   "hm": 202,
+   "doppelt": 0,
+   "pfad_prozent": 45,
+   "text": "7.9 km, ↑202 Hm, doppelt 0 m, Pfad/Weg 45 %, Dorf 21 %, Hauptstrasse 0 m"
+  },
+  {
+   "profil": "strasse",
+   "label": "Nur Strasse",
+   "datei": "/home/runner/work/laufkarten/laufkarten/heute/heute_strasse.png",
+   "gpx": "/home/runner/work/laufkarten/laufkarten/heute/heute_strasse.gpx",
+   "km": 8.0,
+   "hm": 199,
+   "doppelt": 24,
+   "pfad_prozent": 24,
+   "text": "8.0 km, ↑199 Hm, doppelt 24 m, Pfad/Weg 24 %, Dorf 32 %, Hauptstrasse 0 m"
+  },
+  {
+   "profil": "huegel",
+   "label": "Höhenmeter",
+   "datei": "/home/runner/work/laufkarten/laufkarten/heute/heute_huegel.png",
+   "gpx": "/home/runner/work/laufkarten/laufkarten/heute/heute_huegel.gpx",
+   "km": 8.1,
+   "hm": 337,
+   "doppelt": 4,
+   "pfad_prozent": 38,
+   "text": "8.1 km, ↑337 Hm, doppelt 4 m, Pfad/Weg 38 %, Dorf 18 %, Hauptstrasse 0 m"
+  },
+  {
+   "profil": "flach",
+   "label": "Flach",
+   "datei": "/home/runner/work/laufkarten/laufkarten/heute/heute_flach.png",
+   "gpx": "/home/runner/work/laufkarten/laufkarten/heute/heute_flach.gpx",
+   "km": 8.2,
+   "hm": 198,
+   "doppelt": 0,
+   "pfad_prozent": 45,
+   "text": "8.2 km, ↑198 Hm, doppelt 0 m, Pfad/Weg 45 %, Dorf 24 %, Hauptstrasse 0 m"
+  },
+  {
+   "profil": "natur",
+   "label": "Natur",
+   "datei": "/home/runner/work/laufkarten/laufkarten/heute/heute_natur.png",
+   "gpx": "/home/runner/work/laufkarten/laufkarten/heute/heute_natur.gpx",
+   "km": 7.8,
+   "hm": 219,
+   "doppelt": 1,
+   "pfad_prozent": 78,
+   "text": "7.8 km, ↑219 Hm, doppelt 1 m, Pfad/Weg 78 %, Dorf 8 %, Hauptstrasse 0 m"
+  }
+ ]
+}
