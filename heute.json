@@ -1,0 +1,62 @@
+{
+ "datum": "2026-11-14",
+ "einheit": "Sa: Lockerer Lauf 8 km + Push, 12:00",
+ "vorgabe": "6:10–6:30/km, Puls unter 154, danach Push",
+ "varianten": [
+  {
+   "profil": "normal",
+   "label": "Normal",
+   "datei": "/home/runner/work/laufkarten/laufkarten/heute/heute_normal.png",
+   "gpx": "/home/runner/work/laufkarten/laufkarten/heute/heute_normal.gpx",
+   "km": 7.8,
+   "hm": 186,
+   "doppelt": 0,
+   "pfad_prozent": 40,
+   "text": "7.8 km, ↑186 Hm, doppelt 0 m, Pfad/Weg 40 %, Dorf 28 %, Hauptstrasse 0 m"
+  },
+  {
+   "profil": "strasse",
+   "label": "Nur Strasse",
+   "datei": "/home/runner/work/laufkarten/laufkarten/heute/heute_strasse.png",
+   "gpx": "/home/runner/work/laufkarten/laufkarten/heute/heute_strasse.gpx",
+   "km": 7.8,
+   "hm": 195,
+   "doppelt": 41,
+   "pfad_prozent": 20,
+   "text": "7.8 km, ↑195 Hm, doppelt 41 m, Pfad/Weg 20 %, Dorf 36 %, Hauptstrasse 0 m"
+  },
+  {
+   "profil": "huegel",
+   "label": "Höhenmeter",
+   "datei": "/home/runner/work/laufkarten/laufkarten/heute/heute_huegel.png",
+   "gpx": "/home/runner/work/laufkarten/laufkarten/heute/heute_huegel.gpx",
+   "km": 8.8,
+   "hm": 452,
+   "doppelt": 45,
+   "pfad_prozent": 36,
+   "text": "8.8 km, ↑452 Hm, doppelt 45 m, Pfad/Weg 36 %, Dorf 18 %, Hauptstrasse 0 m"
+  },
+  {
+   "profil": "flach",
+   "label": "Flach",
+   "datei": "/home/runner/work/laufkarten/laufkarten/heute/heute_flach.png",
+   "gpx": "/home/runner/work/laufkarten/laufkarten/heute/heute_flach.gpx",
+   "km": 7.6,
+   "hm": 194,
+   "doppelt": 0,
+   "pfad_prozent": 46,
+   "text": "7.6 km, ↑194 Hm, doppelt 0 m, Pfad/Weg 46 %, Dorf 23 %, Hauptstrasse 0 m"
+  },
+  {
+   "profil": "natur",
+   "label": "Natur",
+   "datei": "/home/runner/work/laufkarten/laufkarten/heute/heute_natur.png",
+   "gpx": "/home/runner/work/laufkarten/laufkarten/heute/heute_natur.gpx",
+   "km": 7.5,
+   "hm": 211,
+   "doppelt": 4,
+   "pfad_prozent": 81,
+   "text": "7.5 km, ↑211 Hm, doppelt 4 m, Pfad/Weg 81 %, Dorf 3 %, Hauptstrasse 0 m"
+  }
+ ]
+}
