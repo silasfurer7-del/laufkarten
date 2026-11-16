@@ -27,6 +27,11 @@ Vor jeder Frage zu «heute» zuerst `curl -sL https://raw.githubusercontent.com/
 Regeln in `skills/training/SKILL.md`: ein Strava-Aufruf (`list_activities`, 15 Einträge), kurze Antwort,
 nur PR-Chancen statt Übungslisten. Den Skill vor jeder Trainings-Antwort lesen.
 
+## Web-App
+
+`web/` (Kern `src/app.js`, Strava/Karten `src/direct.js`, Bau `build.py`, Plan `plan.py`), Workflow `web.yml` → GitHub Pages.
+Keine persönlichen Trainingsdaten und keine Geheimnisse einchecken.
+
 ## Daten
 
 - `rheintal-bodensee.pmtiles`: Shortbread-Vektorkacheln (OSM, ODbL), 9.35,47.33 – 9.75,47.57, Zoom 0–14

@@ -1,0 +1,51 @@
+name: Web-App (GitHub Pages)
+# Baut die Trainings-App aus `web/` und stellt sie auf GitHub Pages:
+#   https://<benutzer>.github.io/<repo>/
+# In der Seite: App, Karten-Kacheln, die vorgerechneten Runden (Branch `karten`) und der Trainingsplan.
+# Strava fragt der Browser nach einmaliger Anmeldung selbst ab; diese Daten liegen nie im Repo.
+# Secrets (Settings -> Secrets and variables -> Actions):
+#   STRAVA_CLIENT_ID  Client-ID der eigenen Strava-API-App (kommt in die Seite, ist nicht geheim)
+#   KALENDER_ICS      geheime iCal-Adresse des Kalenders; nur Trainings-Termine werden uebernommen
+on:
+  push:
+    branches: [main]
+    paths: ['web/**', '.github/workflows/web.yml', 'rheintal-bodensee.pmtiles']
+  workflow_run:
+    workflows: ['Karten vorrechnen (fuer die 20-Uhr-Nachricht)']
+    types: [completed]
+  schedule:
+    - cron: '23 * * * *'   # stuendlich, damit Plan-Aenderungen aus dem Kalender ankommen
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: false
+jobs:
+  seite:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Vorgerechnete Runden holen (Branch karten)
+        uses: actions/checkout@v4
+        with: { ref: karten, path: _karten }
+        continue-on-error: true
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install -q icalendar recurring-ical-events
+      - name: Seite bauen
+        env:
+          TZ: Europe/Zurich
+          STRAVA_CLIENT_ID: ${{ secrets.STRAVA_CLIENT_ID }}
+          KALENDER_ICS: ${{ secrets.KALENDER_ICS }}
+        run: python3 web/build.py --out _site --karten _karten
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with: { path: _site }
+      - id: deploy
+        uses: actions/deploy-pages@v4
