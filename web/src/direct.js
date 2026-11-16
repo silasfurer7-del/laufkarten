@@ -27,8 +27,9 @@ async function loadStrava(){if(!sv().refresh){ST.acts={s:'aus'};return}if(loadin
     mem.set('desc',desc);RAW.acts=list.map(x=>norm(x,desc));lastLoad=Date.now();mem.set('acts',{at:lastLoad,list:RAW.acts});ST.acts={s:'live',at:lastLoad};STRAVA_MSG=''}
   catch(e){STRAVA_MSG=e.message||'Strava ist gerade nicht erreichbar.';ST.acts=RAW.acts?{s:'live',at:lastLoad,alt:true}:{s:'fehler'}}
   loading=false;rebuild();render(true)}
+const setPlan=p=>{RAW.cal=p.events||[];ST.cal={s:'live',at:Date.parse(p.stand)||Date.now(),quelle:p.quelle}};
 async function loadFiles(){
-  try{const p=await (await fetch('plan.json',{cache:'no-store'})).json();RAW.cal=p.events||[];ST.cal={s:'live',at:Date.parse(p.stand)||Date.now(),quelle:p.quelle}}catch(e){ST.cal={s:'fehler'}}
+  try{const p=await (await fetch('plan.json',{cache:'no-store'})).json();setPlan(p);mem.set('plan',p)}catch(e){if(!RAW.cal)ST.cal={s:'fehler'}}
   try{const r=await (await fetch('routes.json')).json(),f=p=>p[0].toFixed(5)+','+p[1].toFixed(5),R={};
     for(const k in r){const q=r[k],pts=q.pts,idx=[];for(let i=1;i<=9;i++)idx.push(Math.round(i*(pts.length-1)/10));R[k]=[q.km,q.hm,null,f(pts[0]),idx.map(i=>f(pts[i])).join('%7C'),pts]}ROUTES=R}catch(e){}
   rebuild();render(true)}
@@ -91,6 +92,6 @@ Hooks.after=()=>{const el=document.querySelector('[data-live]');if(!el||!MAPSEGS
   LIVE.push(map)};
 
 /* ---------- Start ---------- */
-(async()=>{const c=mem.get('acts',null);if(c&&c.list&&sv().refresh){RAW.acts=c.list;lastLoad=c.at;ST.acts={s:'live',at:c.at};rebuild()}
+(async()=>{const c=mem.get('acts',null),pl=mem.get('plan',null);if(pl&&pl.events)setPlan(pl);else ST.cal={s:'laden'};if(c&&c.list&&sv().refresh){RAW.acts=c.list;lastLoad=c.at;ST.acts={s:'live',at:c.at}}rebuild();
   await oauthReturn();render();loadFiles();loadStrava()})();
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-lastLoad>90e3){loadFiles();loadStrava()}});
