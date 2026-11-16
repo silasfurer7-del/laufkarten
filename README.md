@@ -27,6 +27,25 @@ Wolfhalden/Heiden/St. Margrethen ab; andere Startpunkte dekodiert das Skript ein
 nur Strasse, Höhenmeter, flach, Natur) und legt sie mit `scripts/heute.py` auf den Branch `heute`:
 `https://raw.githubusercontent.com/silasfurer7-del/laufkarten/heute/heute.md`. Im Chat holt der Skill nur diese Dateien.
 
+## Web-App (GitHub Pages)
+
+Die Trainings-App liegt in `web/` und läuft ohne Claude: `https://<benutzer>.github.io/laufkarten/`.
+Der Workflow `web.yml` baut sie bei jedem Push, nach dem Karten-Lauf und stündlich neu.
+
+- **Plan**: aus dem Kalender. Secret `KALENDER_ICS` = geheime iCal-Adresse (Google Calendar → Einstellungen des Kalenders →
+  «Privatadresse im iCal-Format»). Nur Termine mit Lauf, Intervalle, Push, Pull, Beine, Gym im Titel landen in `plan.json`.
+  Ohne Secret gilt `web/plan-start.json`.
+- **Strava**: der Browser fragt Strava selbst ab, beim Öffnen der App. Einmal pro Gerät unter «Ich → daten» anmelden.
+  Die Daten bleiben auf dem Gerät, nichts davon liegt im Repo.
+- **Karten**: werden in der App live aus `rheintal-bodensee.pmtiles` gezeichnet, geplante Runden kommen aus dem Branch `karten`.
+- **Garmin** (Schlaf, Energie): hier nicht verfügbar, das geht nur über einen eigenen Server.
+
+Für ein eigenes Exemplar: Repo kopieren, unter Settings → Pages die Quelle «GitHub Actions» wählen, auf strava.com/settings/api
+eine API-App anlegen (Callback-Domain `<benutzer>.github.io`), Secrets `STRAVA_CLIENT_ID` und `KALENDER_ICS` setzen,
+`web/profil.json` anpassen. Das Client-Geheimnis von Strava gehört nicht ins Repo: es wird in der App eingetragen.
+
+Lokal bauen: `python3 web/build.py --out _site --karten <Ordner mit Branch karten>`.
+
 ## Daten
 
 - `rheintal-bodensee.pmtiles`: Shortbread-Vektorkacheln (© OpenStreetMap-Mitwirkende, ODbL; Extrakt via BBBike),

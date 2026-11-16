@@ -1,0 +1,68 @@
+{
+ "events": [
+  {
+   "id": "start-0",
+   "summary": "Intervalle 4×1000 m @ 4:35",
+   "description": "2 km einlaufen · 4×1000 m @ 4:35/km · 2 min Trabpause · 1–2 km auslaufen",
+   "start": {
+    "dateTime": "2026-11-16T17:30:00+01:00"
+   }
+  },
+  {
+   "id": "start-1",
+   "summary": "Push (Brust, Schultern, Trizeps, Bauch)",
+   "description": "",
+   "start": {
+    "dateTime": "2026-11-17T17:30:00+01:00"
+   }
+  },
+  {
+   "id": "start-2",
+   "summary": "Langer Lauf 16 km",
+   "description": "16 km @ 6:30–7:00/km · Puls unter 163 · Steigungen gehen · Stirnlampe",
+   "start": {
+    "dateTime": "2026-11-18T17:00:00+01:00"
+   }
+  },
+  {
+   "id": "start-3",
+   "summary": "Pull (Rücken, Schultern, Bizeps)",
+   "description": "",
+   "start": {
+    "dateTime": "2026-11-19T17:30:00+01:00"
+   }
+  },
+  {
+   "id": "start-4",
+   "summary": "Beine",
+   "description": "",
+   "start": {
+    "dateTime": "2026-11-20T17:30:00+01:00"
+   }
+  },
+  {
+   "id": "start-5",
+   "summary": "Lockerer Lauf 9 km",
+   "description": "9 km @ 6:10–6:30/km · Puls unter 163",
+   "start": {
+    "dateTime": "2026-11-21T12:00:00+01:00"
+   }
+  },
+  {
+   "id": "start-6",
+   "summary": "Push (Gym)",
+   "description": "",
+   "start": {
+    "dateTime": "2026-11-21T17:00:00+01:00"
+   }
+  },
+  {
+   "id": "start-7",
+   "summary": "Pull (Rücken, Schultern, Bizeps)",
+   "description": "",
+   "start": {
+    "dateTime": "2026-11-22T12:00:00+01:00"
+   }
+  }
+ ]
+}
