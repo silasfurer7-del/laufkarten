@@ -169,7 +169,7 @@ V.heute=()=>{
       <p class="b15">${esc(it.k==='run'?it.desc||it.sub:it.text||it.sub)}</p>
       <div class="acts"><button class="btn-a ${it.k==='gym'?'blu':''}" data-act="done" data-id="${it.id}">Abhaken</button><button class="btn-b" data-act="note">Notiz</button></div>
       ${S.noteOpen||S.notes[it.id]?`<textarea class="note" rows="2" placeholder="Wie war es?" data-note="${it.id}">${esc(S.notes[it.id]||'')}</textarea>`:''}</div>`}
-  else h=hero({plain:1,lab:'Heute',big:M.evs.length?'Frei':'Kein Plan',val:M.evs.length?'Alles erledigt':'–',text:M.evs.length?'Im Kalender steht nichts mehr an.':'Es ist noch kein Trainingsplan geladen.'});
+  else h=hero({plain:1,lab:'Heute',big:M.evs.length?'Frei':ST.cal.s==='laden'?'Plan':'Kein Plan',val:M.evs.length?'Alles erledigt':ST.cal.s==='laden'?'lädt':'–',text:M.evs.length?'Im Kalender steht nichts mehr an.':ST.cal.s==='laden'?'':'Es ist noch kein Trainingsplan geladen.'});
   const u=S.lastDone&&M.evs.find(x=>x.id===S.lastDone&&S.done[x.id]);
   return `<main class="page">${head(`${d.getDate()}. ${MON[d.getMonth()]}`,`<span class="n34" id="clock">${clock()}</span>`)}
   <div class="stack">${Hooks.banner()}${h}${u?`<div class="undo b12 gr">${esc(u.t)} abgehakt. <button data-act="undo">Rückgängig</button></div>`:''}
