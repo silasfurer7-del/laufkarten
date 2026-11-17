@@ -45,6 +45,7 @@ jobs:
           exit 1
       - name: Pruefen
         if: steps.cf.outputs.url != ''
+        continue-on-error: true   # beim allerersten Mal braucht das Zertifikat der Adresse ein paar Minuten
         run: |
           sleep 8
           echo "Vermittler: ${{ steps.cf.outputs.url }}"
