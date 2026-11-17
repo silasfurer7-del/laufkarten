@@ -38,6 +38,12 @@ def main():
     lies = lambda p: open(os.path.join(WEB, 'src', p), encoding='utf-8').read()
     js = lies('app.js') + '\n' + lies('direct.js')
     js = js.replace('/*PROFIL*/{}', json.dumps(profil, ensure_ascii=False), 1)
+    relay = os.environ.get('GARMIN_RELAY', '').strip()
+    if not relay:
+        sys.path.insert(0, os.path.join(ROOT, 'worker'))
+        import cf
+        relay = cf.finde()[1] or ''
+    js = js.replace("/*GARMIN_RELAY*/''", json.dumps(relay.rstrip('/')), 1)
     js = js.replace("/*STRAVA_CLIENT_ID*/''", json.dumps(re.sub(r'\D', '', os.environ.get('STRAVA_CLIENT_ID', ''))), 1)
     titel = f"{profil.get('name', '')} Sport".strip()
     html = f"""<!DOCTYPE html>
@@ -86,7 +92,7 @@ def main():
     r = routen(a.karten)
     json.dump(r, open(os.path.join(out, 'routes.json'), 'w'), separators=(',', ':'))
     plan.schreibe(os.path.join(out, 'plan.json'), WEB, profil.get('zeitzone', 'Europe/Zurich'))
-    print('Seite:', out, '·', len(r), 'Routen ·', len(html) // 1024, 'KB index.html')
+    print('Seite:', out, '·', len(r), 'Routen ·', len(html) // 1024, 'KB index.html ·', 'Garmin-Vermittler' if relay else 'ohne Garmin-Vermittler')
 
 
 if __name__ == '__main__':

@@ -1,0 +1,42 @@
+name: Garmin-Vermittler (Cloudflare Worker)
+# Stellt `worker/garmin.js` als Cloudflare Worker bereit. Er reicht die Garmin-Anfragen der Web-App durch,
+# weil Garmins Personal API keine Aufrufe direkt aus dem Browser erlaubt. Er speichert nichts.
+# Secret: CLOUDFLARE_API_TOKEN (Cloudflare -> API Tokens -> Vorlage «Edit Cloudflare Workers»).
+# Der Garmin-Schluessel gehoert NICHT hierher: er wird in der App eingetragen und bleibt auf dem Geraet.
+on:
+  push:
+    branches: [main]
+    paths: ['worker/**', '.github/workflows/worker.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  worker:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Konto und Adresse finden
+        id: cf
+        run: python3 worker/cf.py >> "$GITHUB_OUTPUT"
+      - name: Ohne Token gibt es nichts zu tun
+        if: steps.cf.outputs.account == ''
+        run: echo "::warning::Secret CLOUDFLARE_API_TOKEN fehlt oder ist ungueltig. Der Vermittler wurde nicht bereitgestellt."
+      - uses: actions/setup-node@v4
+        if: steps.cf.outputs.account != ''
+        with: { node-version: '22' }
+      - name: Worker bereitstellen
+        if: steps.cf.outputs.account != ''
+        working-directory: worker
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ steps.cf.outputs.account }}
+        run: npx --yes wrangler@4 deploy --var "ORIGINS:https://${GITHUB_REPOSITORY_OWNER,,}.github.io"
+      - name: Pruefen
+        if: steps.cf.outputs.url != ''
+        run: |
+          sleep 8
+          echo "Vermittler: ${{ steps.cf.outputs.url }}"
+          curl -sS -m 20 -o /dev/null -w "Vorabfrage (erwartet 204): %{http_code}\n" -X OPTIONS -H "Origin: https://${GITHUB_REPOSITORY_OWNER,,}.github.io" -H "Access-Control-Request-Method: GET" "${{ steps.cf.outputs.url }}/hrv-service/hrv/2026-01-01"
+          curl -sS -m 20 -w "\nGarmin ohne Schluessel (erwartet 400 oder 401): %{http_code}\n" -H "Origin: https://${GITHUB_REPOSITORY_OWNER,,}.github.io" -H "Authorization: Bearer test" "${{ steps.cf.outputs.url }}/hrv-service/hrv/2026-01-01" | tail -c 300

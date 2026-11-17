@@ -31,6 +31,7 @@ nur PR-Chancen statt Übungslisten. Den Skill vor jeder Trainings-Antwort lesen.
 
 `web/` (Kern `src/app.js`, Strava/Karten `src/direct.js`, Bau `build.py`, Plan `plan.py`), Workflow `web.yml` → GitHub Pages.
 Keine persönlichen Trainingsdaten und keine Geheimnisse einchecken.
+`worker/` (Cloudflare Worker als Garmin-Vermittler, Workflow `worker.yml`): reicht nur durch, speichert nichts.
 
 ## Daten
 
