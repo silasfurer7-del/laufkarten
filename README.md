@@ -38,10 +38,14 @@ Der Workflow `web.yml` baut sie bei jedem Push, nach dem Karten-Lauf und stündl
 - **Strava**: der Browser fragt Strava selbst ab, beim Öffnen der App. Einmal pro Gerät unter «Ich → daten» anmelden.
   Die Daten bleiben auf dem Gerät, nichts davon liegt im Repo.
 - **Karten**: werden in der App live aus `rheintal-bodensee.pmtiles` gezeichnet, geplante Runden kommen aus dem Branch `karten`.
-- **Garmin** (Schlaf, Energie): hier nicht verfügbar, das geht nur über einen eigenen Server.
+- **Garmin** (Schlaf, Energie, HRV): über Garmins Personal API. Weil Garmin keine Aufrufe direkt aus dem Browser erlaubt,
+  reicht ein kleiner Cloudflare Worker (`worker/garmin.js`, Workflow `worker.yml`) die Anfragen durch. Er speichert nichts.
+  Den Schlüssel (connect.garmin.com → Einstellungen → Personal API Key) trägt man in der App ein; er bleibt auf dem Gerät.
+  Ohne Vermittler lässt sich stattdessen der Garmin-Export (ZIP) in der App laden.
 
 Für ein eigenes Exemplar: Repo kopieren, unter Settings → Pages die Quelle «GitHub Actions» wählen, auf strava.com/settings/api
-eine API-App anlegen (Callback-Domain `<benutzer>.github.io`), Secrets `STRAVA_CLIENT_ID` und `KALENDER_ICS` setzen,
+eine API-App anlegen (Callback-Domain `<benutzer>.github.io`), Secrets `STRAVA_CLIENT_ID`, `KALENDER_ICS` und für Garmin
+`CLOUDFLARE_API_TOKEN` (Cloudflare, Vorlage «Edit Cloudflare Workers») setzen,
 `web/profil.json` anpassen. Das Client-Geheimnis von Strava gehört nicht ins Repo: es wird in der App eingetragen.
 
 Lokal bauen: `python3 web/build.py --out _site --karten <Ordner mit Branch karten>`.

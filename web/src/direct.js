@@ -39,7 +39,7 @@ ACT.strava=()=>{const g=id=>{const e=document.getElementById(id);return e?e.valu
   if(!/^\d+$/.test(cid)||secret.length<20){STRAVA_MSG='Bitte Client-ID (Zahl) und Client-Geheimnis aus deiner Strava-API-Seite eintragen.';document.activeElement&&document.activeElement.blur();render(true);return}
   mem.set('strava',{cid,secret});location.href=`https://www.strava.com/oauth/authorize?client_id=${cid}&redirect_uri=${encodeURIComponent(redirectUri())}&response_type=code&approval_prompt=auto&scope=read,activity:read_all`};
 ACT.trennen=()=>{mem.set('strava',{});mem.set('acts',null);RAW.acts=null;ST.acts={s:'aus'};rebuild();render(true)};
-ACT.reload=()=>{loadFiles();loadStrava()};
+ACT.reload=()=>{loadFiles();loadStrava();loadGarmin()};
 async function oauthReturn(){const q=new URLSearchParams(location.search),code=q.get('code'),err=q.get('error');if(!code&&!err)return;
   history.replaceState(null,'',location.pathname+'#ich');
   if(err){STRAVA_MSG='Die Anmeldung bei Strava wurde abgebrochen.';return}
@@ -56,11 +56,51 @@ Hooks.daten=()=>{const on=!!sv().refresh,c=ST.cal,a=ST.acts;
   ${on?`<button class="pill sb13" style="margin-top:16px" data-act="reload">Neu laden</button><button class="pill sb13" style="margin-top:8px" data-act="trennen">Strava trennen</button>`
      :`${CID?'':'<input class="fld" id="cid" inputmode="numeric" autocomplete="off" placeholder="Client-ID">'}<input class="fld" id="csec" type="password" autocomplete="off" placeholder="Client-Geheimnis"><button class="pill sb13" style="margin-top:10px;background:var(--ink);color:var(--bg)" data-act="strava">Mit Strava verbinden</button>
        <p class="b12 gr" style="margin-top:10px">Beides steht auf strava.com/settings/api. Es wird nur auf diesem Gerät gespeichert.</p>`}
-  <div style="margin-top:14px"><div class="sb13">Garmin</div><div class="b12 gr" style="margin-top:2px">${gm()?`Export geladen · Stand ${gm().rec.asof}`:'Kein Live-Abruf. Du kannst deinen Garmin-Export (ZIP) laden, er bleibt auf diesem Gerät.'}</div>${GMSG?`<div class="b12 or" style="margin-top:4px">${esc(GMSG)}</div>`:''}
-  <button class="pill sb13" style="margin-top:10px" data-act="garmin">${gm()?'Neuen Export laden':'Garmin-Export laden'}</button>${gm()?'<button class="pill sb13" style="margin-top:8px" data-act="garminweg">Garmin-Daten löschen</button>':''}</div></div>`};
+  <div style="margin-top:14px"><div class="sb13">Garmin</div>${garminCard()}</div></div>`};
 
 /* ---------- Garmin: Export-ZIP auf dem Gerät einlesen ---------- */
-let GMSG='';const gm=()=>mem.get('garmin',null);
+let GMSG='',GDIAG={};const gm=()=>mem.get('garmin',null),RELAY=/*GARMIN_RELAY*/'',gk=()=>mem.get('gk',{});
+function garminCard(){const g=gm(),on=!!gk().key,msg=GMSG?`<div class="b12 or" style="margin-top:4px">${esc(GMSG)}</div>`:'',line=t=>`<div class="b12 gr" style="margin-top:2px">${t}</div>`;
+  if(on)return line(g&&g.live?`Verbunden · Stand ${stand(g.at)}`:'Verbunden')+msg+`<button class="pill sb13" style="margin-top:10px" data-act="garmintrennen">Garmin trennen</button>${Object.keys(GDIAG).length?'<button class="pill sb13" style="margin-top:8px" data-act="gdiag">Diagnose kopieren</button>':''}`;
+  const exp=g?line(`Export geladen · Stand ${g.rec.asof}`):'';
+  if(RELAY)return exp+line('Schlüssel von connect.garmin.com, Einstellungen, «Personal API Key». Er bleibt auf diesem Gerät.')+msg+`<input class="fld" id="gkey" type="password" autocomplete="off" placeholder="Garmin-Schlüssel"><button class="pill sb13" style="margin-top:10px;background:var(--ink);color:var(--bg)" data-act="garminlive">Mit Garmin verbinden</button>`;
+  return (exp||line('Kein Live-Abruf. Du kannst deinen Garmin-Export (ZIP) laden, er bleibt auf diesem Gerät.'))+msg+`<button class="pill sb13" style="margin-top:10px" data-act="garmin">${g?'Neuen Export laden':'Garmin-Export laden'}</button>${g?'<button class="pill sb13" style="margin-top:8px" data-act="garminweg">Garmin-Daten löschen</button>':''}`}
+
+/* ---------- Garmin live: Personal API über den Vermittler ---------- */
+const dig=(o,...names)=>{const q=[o];let n=0;while(q.length&&n++<5000){const x=q.shift();if(!x||typeof x!=='object')continue;if(!Array.isArray(x))for(const k of names)if(typeof x[k]==='number')return Math.round(x[k]);for(const v of Array.isArray(x)?x:Object.values(x))if(v&&typeof v==='object')q.push(v)}return null};
+const digV=(o,name,test)=>{const q=[o];let n=0;while(q.length&&n++<5000){const x=q.shift();if(!x||typeof x!=='object')continue;if(!Array.isArray(x)&&test(x[name]))return x[name];for(const v of Array.isArray(x)?x:Object.values(x))if(v&&typeof v==='object')q.push(v)}return null};
+const gDate=x=>{const v=digV(x,'calendarDate',t=>typeof t==='string')||digV(x,'date',t=>typeof t==='string')||digV(x,'summaryDate',t=>typeof t==='string');return v?v.slice(0,10):null};
+const gRows=o=>Array.isArray(o)?o:(o&&typeof o==='object'?Object.values(o).find(v=>Array.isArray(v)&&v.length&&typeof v[0]==='object')||[o]:[]);
+const gScore=x=>{const s=digV(x,'sleepScores',t=>t&&typeof t==='object');if(s){const ov=s.overall,v=ov&&typeof ov==='object'?ov.value:ov;if(typeof v==='number')return Math.round(v);if(typeof s.overallScore==='number')return Math.round(s.overallScore)}return dig(x,'overallSleepScore','sleepScore','overallScore')};
+const outline=(v,d=0)=>v===null?'null':Array.isArray(v)?`[${v.length}×${v.length?outline(v[0],d+1):''}]`:typeof v==='object'?(d>4?'{…}':'{'+Object.keys(v).slice(0,70).map(k=>k+':'+outline(v[k],d+1)).join(',')+'}'):typeof v;
+async function gTok(force){const c=gk();if(!c.key)throw new Error('Garmin ist nicht verbunden.');if(!force&&c.token&&c.exp>Date.now()+3600e3)return c.token;
+  const r=await fetch(RELAY+'/personalapitoken-service/personal-api/personal-api-key/token',{method:'POST',headers:{Authorization:'ApiKey '+c.key}});
+  if(r.status===400||r.status===401||r.status===403)throw Object.assign(new Error('Garmin lehnt den Schlüssel ab. Ist er vollständig kopiert und noch gültig?'),{auth:true});
+  if(!r.ok)throw new Error('Garmin antwortet mit Fehler '+r.status+'.');
+  let t=(await r.text()).trim();if(t[0]==='{'){try{const j=JSON.parse(t);t=j.access_token||j.token||''}catch(e){}}t=t.replace(/^"|"$/g,'');if(!t)throw new Error('Garmin hat kein Zugangs-Token geschickt.');
+  let exp=Date.now()+23*3600e3;try{exp=JSON.parse(atob(t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))).exp*1000||exp}catch(e){}
+  mem.set('gk',{...c,token:t,exp});return t}
+async function gGet(name,path){const go=async f=>fetch(RELAY+path,{headers:{Authorization:'Bearer '+await gTok(f)}});let r=await go(false);if(r.status===401)r=await go(true);
+  let j=null;try{const t=await r.text();j=t?JSON.parse(t):null}catch(e){}GDIAG[name]=r.status+' '+outline(j);return r.ok?j:null}
+let gLoading=false,gLast=0;
+async function loadGarmin(){if(!RELAY||!gk().key||gLoading)return;gLoading=true;GDIAG={};
+  try{const now=new Date(),t=ymd(now),y=ymd(addD(now,-1)),w=ymd(addD(now,-6));await gTok(false);
+    const [sum,bb,sl,sls,hrv,str]=await Promise.all([gGet('tag',`/usersummary-service/v2/dailysummaries?startDate=${t}&endDate=${t}`),gGet('batterie',`/wellness-service/wellness/bodyBattery/reports/daily?startDate=${y}&endDate=${t}`),gGet('schlaf',`/sleep-service/sleep/dailySleep?date=${t}`),
+      gGet('naechte',`/sleep-service/sleep/dailySleepSummariesByDate?startDate=${w}&endDate=${t}`),gGet('hrv',`/hrv-service/hrv/${t}`),gGet('stress',`/usersummary-service/stats/stress/daily/${t}/${t}`)].map(p=>p.catch(()=>null)));
+    if(Object.values(GDIAG).every(v=>!/^2/.test(v)))throw new Error('Garmin gibt keine Daten heraus ('+Object.values(GDIAG).map(v=>v.slice(0,3)).join(', ')+').');
+    const day=gRows(sum).find(x=>gDate(x)===t)||gRows(sum).pop()||{},bat=gRows(bb).find(x=>gDate(x)===t)||gRows(bb).pop()||{},arr=digV(bat,'bodyBatteryValuesArray',Array.isArray)||[],lastV=arr.length?arr[arr.length-1]:null,
+      lvl=Array.isArray(lastV)?(typeof lastV[2]==='number'?lastV[2]:typeof lastV[1]==='number'?lastV[1]:null):null;
+    const energy=dig(day,'bodyBatteryMostRecentValue','bodyBatteryLatestValue')??(lvl!=null?Math.round(lvl):null),wake=dig(day,'bodyBatteryAtWakeTime'),ch=dig(day,'bodyBatteryChargedValue')??dig(bat,'charged','chargedValue'),dr=dig(day,'bodyBatteryDrainedValue')??dig(bat,'drained','drainedValue');
+    const cur=sl&&gDate(sl)===t?sl:null,ph=cur?['deepSleepSeconds','lightSleepSeconds','remSleepSeconds','awakeSleepSeconds'].map(k=>dig(cur,k)):[],secs=cur?(dig(cur,'sleepTimeSeconds')??((ph[0]||0)+(ph[1]||0)+(ph[2]||0))):0;
+    const nr=gRows(sls),nights=[];for(let i=6;i>=0;i--){const dt=addD(now,-i),k=ymd(dt),row=nr.find(x=>gDate(x)===k);nights.push([DOW[dt.getDay()].toUpperCase(),row?gScore(row):(i===0&&cur?gScore(cur):null)])}
+    const rec={energy,energyText:[wake!=null?`Aufgewacht mit ${wake}.`:'',ch!=null?`Heute ${ch} geladen, ${dr??0} verbraucht.`:''].filter(Boolean).join(' '),sleep:secs?hmm(secs):null,score:cur?gScore(cur):null,rhr:dig(day,'restingHeartRate','restingHeartRateInBeatsPerMinute'),stress:dig(day,'averageStressLevel')??dig(str,'overallStressLevel','averageStressLevel'),hrv:dig(hrv,'lastNightAvg'),nights,
+      phases:secs&&ph[0]!=null?[['Tief',ph[0]],['Leicht',ph[1]],['REM',ph[2]],['Wach',ph[3]]].map(q=>[q[0],hmm(q[1]||0),Math.max(1,Math.round((q[1]||0)/60))]):null};
+    gLast=Date.now();mem.set('garmin',{at:gLast,rec,live:true});GMSG=rec.energy==null&&rec.rhr==null&&!rec.sleep?'Verbunden, aber Garmin hat für heute noch keine Werte. Tippe auf «Diagnose kopieren» und schick sie in den Chat.':''}
+  catch(e){GMSG=e.message||'Garmin ist gerade nicht erreichbar.';if(e.auth){mem.set('gk',{});GDIAG={}}}
+  gLoading=false;useGarmin();rebuild();render(true)}
+ACT.garminlive=()=>{const e=document.getElementById('gkey'),key=e?e.value.trim():'';if(key.length<20){GMSG='Bitte den ganzen Garmin-Schlüssel einfügen.';render(true);return}document.activeElement&&document.activeElement.blur();mem.set('gk',{key});GMSG='Verbinde …';render(true);loadGarmin()};
+ACT.garmintrennen=()=>{mem.set('gk',{});mem.set('garmin',null);GMSG='';GDIAG={};useGarmin();rebuild();render(true)};
+ACT.gdiag=async()=>{const t='Garmin-Diagnose (nur Feldnamen, keine Werte)\n'+Object.entries(GDIAG).map(([k,v])=>k+': '+v).join('\n');try{await navigator.clipboard.writeText(t);GMSG='Kopiert. Füge es im Chat ein.'}catch(e){GMSG=t}render(true)};
 async function unzip(buf,want){const v=new DataView(buf),td=new TextDecoder(),out=[];let e=buf.byteLength-22;while(e>=0&&v.getUint32(e,true)!==0x06054b50)e--;if(e<0)throw new Error('Das ist keine ZIP-Datei.');
   let p=v.getUint32(e+16,true);const cnt=v.getUint16(e+10,true);
   for(let i=0;i<cnt&&v.getUint32(p,true)===0x02014b50;i++){const method=v.getUint16(p+10,true),cs=v.getUint32(p+20,true),nl=v.getUint16(p+28,true),lo=v.getUint32(p+42,true),name=td.decode(new Uint8Array(buf,p+46,nl));p+=46+nl+v.getUint16(p+30,true)+v.getUint16(p+32,true);
@@ -118,5 +158,5 @@ Hooks.after=()=>{const el=document.querySelector('[data-live]');if(!el||!MAPSEGS
 
 /* ---------- Start ---------- */
 (async()=>{const c=mem.get('acts',null),pl=mem.get('plan',null);if(pl&&pl.events)setPlan(pl);else ST.cal={s:'laden'};useGarmin();if(c&&c.list&&sv().refresh){RAW.acts=c.list;lastLoad=c.at;ST.acts={s:'live',at:c.at}}rebuild();
-  await oauthReturn();render();loadFiles();loadStrava()})();
-document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-lastLoad>90e3){loadFiles();loadStrava()}});
+  await oauthReturn();render();loadFiles();loadStrava();loadGarmin()})();
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-lastLoad>90e3){loadFiles();loadStrava()}if(!document.hidden&&Date.now()-gLast>90e3)loadGarmin()});
