@@ -75,7 +75,7 @@ const gScore=x=>{const s=digV(x,'sleepScores',t=>t&&typeof t==='object');if(s){c
 const outline=(v,d=0)=>v===null?'null':Array.isArray(v)?`[${v.length}×${v.length?outline(v[0],d+1):''}]`:typeof v==='object'?(d>4?'{…}':'{'+Object.keys(v).slice(0,70).map(k=>k+':'+outline(v[k],d+1)).join(',')+'}'):typeof v;
 async function gTok(force){const c=gk();if(!c.key)throw new Error('Garmin ist nicht verbunden.');if(!force&&c.token&&c.exp>Date.now()+3600e3)return c.token;
   const r=await fetch(RELAY+'/personalapitoken-service/personal-api/personal-api-key/token',{method:'POST',headers:{Authorization:'ApiKey '+c.key}});
-  if(r.status===400||r.status===401||r.status===403)throw Object.assign(new Error('Garmin lehnt den Schlüssel ab. Ist er vollständig kopiert und noch gültig?'),{auth:true});
+  if(r.status===400||r.status===401||r.status===403){let b='';try{b=(await r.text()).replace(/\s+/g,' ').trim().slice(0,90)}catch(e){}throw Object.assign(new Error(`Garmin lehnt den Schlüssel ab (Antwort ${r.status}${b?': '+b:''}). Eingefügt waren ${c.key.length} Zeichen. Kopiere ihn frisch aus den Notizen, nur den Schlüssel.`),{auth:true})}
   if(!r.ok)throw new Error('Garmin antwortet mit Fehler '+r.status+'.');
   let t=(await r.text()).trim();if(t[0]==='{'){try{const j=JSON.parse(t);t=j.access_token||j.token||''}catch(e){}}t=t.replace(/^"|"$/g,'');if(!t)throw new Error('Garmin hat kein Zugangs-Token geschickt.');
   let exp=Date.now()+23*3600e3;try{exp=JSON.parse(atob(t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))).exp*1000||exp}catch(e){}
@@ -98,7 +98,7 @@ async function loadGarmin(){if(!RELAY||!gk().key||gLoading)return;gLoading=true;
     gLast=Date.now();mem.set('garmin',{at:gLast,rec,live:true});GMSG=rec.energy==null&&rec.rhr==null&&!rec.sleep?'Verbunden, aber Garmin hat für heute noch keine Werte. Tippe auf «Diagnose kopieren» und schick sie in den Chat.':''}
   catch(e){GMSG=e.message||'Garmin ist gerade nicht erreichbar.';if(e.auth){mem.set('gk',{});GDIAG={}}}
   gLoading=false;useGarmin();rebuild();render(true)}
-ACT.garminlive=()=>{const e=document.getElementById('gkey'),key=e?e.value.trim():'';if(key.length<20){GMSG='Bitte den ganzen Garmin-Schlüssel einfügen.';render(true);return}document.activeElement&&document.activeElement.blur();mem.set('gk',{key});GMSG='Verbinde …';render(true);loadGarmin()};
+ACT.garminlive=()=>{const e=document.getElementById('gkey'),key=e?e.value.replace(/\s+/g,'').replace(/^ApiKey:?/i,''):'';if(/[^\x21-\x7e]/.test(key)){GMSG='Im eingefügten Text sind Sonderzeichen, die in einem Schlüssel nicht vorkommen. Kopiere ihn frisch aus den Notizen.';render(true);return}if(key.length<20){GMSG='Bitte den ganzen Garmin-Schlüssel einfügen.';render(true);return}document.activeElement&&document.activeElement.blur();mem.set('gk',{key});GMSG='Verbinde …';render(true);loadGarmin()};
 ACT.garmintrennen=()=>{mem.set('gk',{});mem.set('garmin',null);GMSG='';GDIAG={};useGarmin();rebuild();render(true)};
 ACT.gdiag=async()=>{const t='Garmin-Diagnose (nur Feldnamen, keine Werte)\n'+Object.entries(GDIAG).map(([k,v])=>k+': '+v).join('\n');try{await navigator.clipboard.writeText(t);GMSG='Kopiert. Füge es im Chat ein.'}catch(e){GMSG=t}render(true)};
 async function unzip(buf,want){const v=new DataView(buf),td=new TextDecoder(),out=[];let e=buf.byteLength-22;while(e>=0&&v.getUint32(e,true)!==0x06054b50)e--;if(e<0)throw new Error('Das ist keine ZIP-Datei.');
