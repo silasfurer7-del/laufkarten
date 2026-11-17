@@ -20,7 +20,11 @@ jobs:
       - uses: actions/checkout@v4
       - name: Konto und Adresse finden
         id: cf
-        run: python3 worker/cf.py >> "$GITHUB_OUTPUT"
+        run: |
+          aus=$(python3 worker/cf.py)
+          konto=$(printf '%s\n' "$aus" | sed -n 's/^account=//p')
+          if [ -n "$konto" ]; then echo "::add-mask::$konto"; fi
+          printf '%s\n' "$aus" >> "$GITHUB_OUTPUT"
       - name: Ohne Token gibt es nichts zu tun
         if: steps.cf.outputs.account == ''
         run: echo "::warning::Secret CLOUDFLARE_API_TOKEN fehlt oder ist ungueltig. Der Vermittler wurde nicht bereitgestellt."
@@ -32,7 +36,13 @@ jobs:
         working-directory: worker
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ steps.cf.outputs.account }}
-        run: npx --yes wrangler@4 deploy --var "ORIGINS:https://${GITHUB_REPOSITORY_OWNER,,}.github.io"
+        run: |
+          # Bei einem ganz neuen Konto kennt Cloudflare den Worker nicht sofort: bis zu viermal versuchen.
+          for versuch in 1 2 3 4; do
+            if npx --yes wrangler@4 deploy --var "ORIGINS:https://${GITHUB_REPOSITORY_OWNER,,}.github.io"; then exit 0; fi
+            echo "Versuch $versuch fehlgeschlagen, warte 20 s"; sleep 20
+          done
+          exit 1
       - name: Pruefen
         if: steps.cf.outputs.url != ''
         run: |
