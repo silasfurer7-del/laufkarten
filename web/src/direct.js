@@ -1,7 +1,7 @@
 /* ================= Daten ohne Claude =================
    Strava direkt im Browser (Anmeldung einmal pro Gerät), Plan und Routen als Dateien aus dem Repo,
    Karten live aus den PMTiles. Persönliche Trainingsdaten bleiben auf dem Gerät. */
-const CID=/*STRAVA_CLIENT_ID*/'';
+const CID=/*STRAVA_CLIENT_ID*/'',VERSION=/*VERSION*/'';
 const sv=()=>mem.get('strava',{});
 const redirectUri=()=>location.origin+location.pathname;
 let STRAVA_MSG='';
@@ -59,7 +59,7 @@ Hooks.daten=()=>{const on=!!sv().refresh,c=ST.cal,a=ST.acts;
   <div style="margin-top:14px"><div class="sb13">Garmin</div>${garminCard()}</div></div>`};
 
 /* ---------- Garmin: Export-ZIP auf dem Gerät einlesen ---------- */
-let GMSG='',GDIAG={};const gm=()=>mem.get('garmin',null),RELAY=/*GARMIN_RELAY*/'',gk=()=>mem.get('gk',{});
+let GMSG='',GDIAG={},GWERT=null;const gm=()=>mem.get('garmin',null),RELAY=/*GARMIN_RELAY*/'',gk=()=>mem.get('gk',{});
 function garminCard(){const g=gm(),on=!!gk().key,msg=GMSG?`<div class="b12 or" style="margin-top:4px">${esc(GMSG)}</div>`:'',line=t=>`<div class="b12 gr" style="margin-top:2px">${t}</div>`;
   if(on)return line(g&&g.live?`Verbunden · Stand ${stand(g.at)}`:'Verbunden')+msg+`<button class="pill sb13" style="margin-top:10px" data-act="garmintrennen">Garmin trennen</button>${Object.keys(GDIAG).length?'<button class="pill sb13" style="margin-top:8px" data-act="gdiag">Diagnose kopieren</button>':''}`;
   const exp=g?line(`Export geladen · Stand ${g.rec.asof}`):'';
@@ -85,25 +85,29 @@ async function gGet(name,path){const go=async f=>fetch(RELAY+path,{headers:{Auth
 let gLoading=false,gLast=0;
 async function loadGarmin(){if(!RELAY||!gk().key||gLoading)return;gLoading=true;GDIAG={};
   try{const now=new Date(),t=ymd(now),y=ymd(addD(now,-1)),w=ymd(addD(now,-6));await gTok(false);
-    const [sum,bb,sl,sls,hrv,str]=await Promise.all([gGet('tag',`/usersummary-service/v2/dailysummaries?startDate=${t}&endDate=${t}`),gGet('batterie',`/wellness-service/wellness/bodyBattery/reports/daily?startDate=${y}&endDate=${t}`),gGet('schlaf',`/sleep-service/sleep/dailySleep?date=${t}`),
+    const [sum,bb,sl,sls,hrv,str]=await Promise.all([gGet('tag',`/usersummary-service/v2/dailysummaries?startDate=${t}&endDate=${t}`),gGet('batterie',`/wellness-service/wellness/bodyBattery/reports/daily?startDate=${y}&endDate=${t}&chunks=96`),gGet('schlaf',`/sleep-service/sleep/dailySleep?date=${t}`),
       gGet('naechte',`/sleep-service/sleep/dailySleepSummariesByDate?startDate=${w}&endDate=${t}`),gGet('hrv',`/hrv-service/hrv/${t}`),gGet('stress',`/usersummary-service/stats/stress/daily/${t}/${t}`)].map(p=>p.catch(()=>null)));
     if(Object.values(GDIAG).every(v=>!/^2/.test(v)))throw new Error('Garmin gibt keine Daten heraus ('+Object.values(GDIAG).map(v=>v.slice(0,3)).join(', ')+').');
-    const day=gRows(sum).find(x=>gDate(x)===t)||gRows(sum).pop()||{},bat=gRows(bb).find(x=>gDate(x)===t)||gRows(bb).pop()||{},arr=digV(bat,'bodyBatteryValuesArray',Array.isArray)||[],lastV=arr.length?arr[arr.length-1]:null,
-      lvl=Array.isArray(lastV)?(typeof lastV[2]==='number'?lastV[2]:typeof lastV[1]==='number'?lastV[1]:null):null;
+    const day=gRows(sum).find(x=>gDate(x)===t)||gRows(sum).pop()||{},bat=gRows(bb).find(x=>gDate(x)===t)||gRows(bb).pop()||{},arr=digV(bat,'bodyBatteryValuesArray',Array.isArray)||[];
+    // Verlauf: Paare [Zeit, Wert] (bei chunks=96 Tiefst- und Höchstwert je Viertelstunde). Der jüngste Punkt ist der aktuellste Wert.
+    const ms=v=>v<1e12?v*1000:v,pts=arr.filter(q=>Array.isArray(q)&&typeof q[0]==='number'&&q[0]>1e9).map(q=>[ms(q[0]),typeof q[2]==='number'?q[2]:q[1]]).filter(q=>typeof q[1]==='number').sort((a,b)=>a[0]-b[0]),lastP=pts.length?pts[pts.length-1]:null,lvl=lastP?lastP[1]:null;
     /* Feldnamen nach Garmins echten Antworten (17.11.2026): tag.data[].bodyBattery/heartRate/stress */
-    const B=day.bodyBattery||{},n1=v=>typeof v==='number'?Math.round(v):null,energy=n1(B.latestValue)??dig(day,'bodyBatteryMostRecentValue','bodyBatteryLatestValue')??(lvl!=null?Math.round(lvl):null),wake=dig(day,'bodyBatteryAtWakeTime'),top=n1(B.maxValue),ch=n1(B.chargedValue)??dig(bat,'charged','chargedValue'),dr=n1(B.drainedValue)??dig(bat,'drained','drainedValue');
+    const B=day.bodyBattery||{},n1=v=>typeof v==='number'?Math.round(v):null,sumE=n1(B.latestValue)??dig(day,'bodyBatteryMostRecentValue','bodyBatteryLatestValue'),wake=dig(day,'bodyBatteryAtWakeTime'),top=n1(B.maxValue),ch=n1(B.chargedValue)??dig(bat,'charged','chargedValue'),dr=n1(B.drainedValue)??dig(bat,'drained','drainedValue');
     const cur=sl&&gDate(sl)===t?sl:null,ph=cur?['deepSleepSeconds','lightSleepSeconds','remSleepSeconds','awakeSleepSeconds'].map(k=>dig(cur,k)):[],secs=cur?(dig(cur,'sleepTimeSeconds')??((ph[0]||0)+(ph[1]||0)+(ph[2]||0))):0;
     const nr=gRows(sls),nights=[];for(let i=6;i>=0;i--){const dt=addD(now,-i),k=ymd(dt),row=nr.find(x=>gDate(x)===k);nights.push([DOW[dt.getDay()].toUpperCase(),row?gScore(row):(i===0&&cur?gScore(cur):null)])}
     // Garmin kennt nur, was die Uhr zuletzt abgeglichen hat: Zeitpunkt der letzten Daten zeigen statt «Jetzt».
-    const wc=day.wellnessChronology||{},loc=typeof wc.endTimestampLocal==='string'&&(wc.endTimestampLocal.match(/T(\d\d:\d\d)/)||[])[1],gmt=typeof wc.endTimestampGmt==='string'?Date.parse(wc.endTimestampGmt.replace(/\.\d+$/,'').replace(/Z$/,'')+'Z'):NaN,alt=gmt&&Date.now()-gmt>25*60e3&&Date.now()-gmt<864e5;
-    const rec={heute:true,asof:loc||undefined,energy,energyText:[wake!=null?`Aufgewacht mit ${wake}.`:top!=null?`Höchststand heute ${top}.`:'',ch!=null?`${ch} geladen, ${dr??0} verbraucht.`:'',alt?'Seither hat die Uhr nicht abgeglichen.':''].filter(Boolean).join(' '),sleep:secs?hmm(secs):null,score:cur?gScore(cur):null,rhr:n1((day.heartRate||{}).restingValue)??dig(day,'restingHeartRate','restingHeartRateInBeatsPerMinute'),stress:n1((day.stress||{}).avgLevel)??dig(day,'averageStressLevel')??dig(str,'overallStressLevel','averageStressLevel'),hrv:dig(hrv,'lastNightAvg'),nights,
+    const wc=day.wellnessChronology||{},gmt=typeof wc.endTimestampGmt==='string'?Date.parse(wc.endTimestampGmt.replace(/\.\d+$/,'').replace(/Z$/,'')+'Z'):NaN;
+    // Zwei Quellen für den Energiestand: Tagesübersicht (kann nachhinken) und Verlauf. Die jüngere gewinnt.
+    const ausVerlauf=lvl!=null&&(sumE==null||!(gmt>0)||lastP[0]>gmt+60e3),energy=ausVerlauf?Math.round(lvl):sumE,zeit=ausVerlauf?lastP[0]:(gmt>0?gmt:null),loc=zeit&&Math.abs(Date.now()-zeit)<864e5?hm(new Date(zeit)):null,alt=zeit&&Date.now()-zeit>25*60e3&&Date.now()-zeit<864e5;
+    GWERT={fassung:VERSION,jetzt:new Date().toISOString(),tagEndeGmt:wc.endTimestampGmt,tagEndeLokal:wc.endTimestampLocal,uebersicht:{latest:B.latestValue,max:B.maxValue,min:B.minValue,geladen:B.chargedValue,verbraucht:B.drainedValue},verlaufPunkte:pts.length,verlaufEnde:pts.slice(-4).map(q=>[new Date(q[0]).toISOString(),q[1]]),gewaehlt:ausVerlauf?'verlauf':'uebersicht',energie:energy};
+    const rec={heute:true,asof:loc||undefined,energy,energyText:[wake!=null?`Aufgewacht mit ${wake}.`:top!=null?`Höchststand heute ${top}.`:'',ch!=null?`${(ausVerlauf?dig(bat,'charged','chargedValue'):null)??ch} geladen, ${(ausVerlauf?dig(bat,'drained','drainedValue'):null)??dr??0} verbraucht.`:'',alt?'Seither hat die Uhr nicht abgeglichen.':''].filter(Boolean).join(' '),sleep:secs?hmm(secs):null,score:cur?gScore(cur):null,rhr:n1((day.heartRate||{}).restingValue)??dig(day,'restingHeartRate','restingHeartRateInBeatsPerMinute'),stress:n1((day.stress||{}).avgLevel)??dig(day,'averageStressLevel')??dig(str,'overallStressLevel','averageStressLevel'),hrv:dig(hrv,'lastNightAvg'),nights,
       phases:secs&&ph[0]!=null?[['Tief',ph[0]],['Leicht',ph[1]],['REM',ph[2]],['Wach',ph[3]]].map(q=>[q[0],hmm(q[1]||0),Math.max(1,Math.round((q[1]||0)/60))]):null};
-    gLast=Date.now();mem.set('garmin',{at:gLast,rec,live:true});GMSG=rec.energy==null&&rec.rhr==null&&!rec.sleep?'Verbunden, aber Garmin hat für heute noch keine Werte.':'';if(rec.energy!=null&&rec.rhr!=null)GDIAG={}}
+    gLast=Date.now();mem.set('garmin',{at:gLast,rec,live:true});GMSG=rec.energy==null&&rec.rhr==null&&!rec.sleep?'Verbunden, aber Garmin hat für heute noch keine Werte.':'';}
   catch(e){GMSG=e.message||'Garmin ist gerade nicht erreichbar.';if(e.auth){mem.set('gk',{});GDIAG={}}}
   gLoading=false;useGarmin();rebuild();render(true)}
 ACT.garminlive=()=>{const e=document.getElementById('gkey'),key=e?e.value.replace(/\s+/g,'').replace(/^ApiKey:?/i,''):'';if(/[^\x21-\x7e]/.test(key)){GMSG='Im eingefügten Text sind Sonderzeichen, die in einem Schlüssel nicht vorkommen. Kopiere ihn frisch aus den Notizen.';render(true);return}if(key.length<20){GMSG='Bitte den ganzen Garmin-Schlüssel einfügen.';render(true);return}document.activeElement&&document.activeElement.blur();mem.set('gk',{key});GMSG='Verbinde …';render(true);loadGarmin()};
 ACT.garmintrennen=()=>{mem.set('gk',{});mem.set('garmin',null);GMSG='';GDIAG={};useGarmin();rebuild();render(true)};
-ACT.gdiag=async()=>{const t='Garmin-Diagnose (nur Feldnamen, keine Werte)\n'+Object.entries(GDIAG).map(([k,v])=>k+': '+v).join('\n');try{await navigator.clipboard.writeText(t);GMSG='Kopiert. Füge es im Chat ein.'}catch(e){GMSG=t}render(true)};
+ACT.gdiag=async()=>{const t='Garmin-Diagnose (Feldnamen; Werte nur zur Body Battery)\n'+(GWERT?'bodyBattery: '+JSON.stringify(GWERT)+'\n':'')+Object.entries(GDIAG).map(([k,v])=>k+': '+v).join('\n');try{await navigator.clipboard.writeText(t);GMSG='Kopiert. Füge es im Chat ein.'}catch(e){GMSG=t}render(true)};
 async function unzip(buf,want){const v=new DataView(buf),td=new TextDecoder(),out=[];let e=buf.byteLength-22;while(e>=0&&v.getUint32(e,true)!==0x06054b50)e--;if(e<0)throw new Error('Das ist keine ZIP-Datei.');
   let p=v.getUint32(e+16,true);const cnt=v.getUint16(e+10,true);
   for(let i=0;i<cnt&&v.getUint32(p,true)===0x02014b50;i++){const method=v.getUint16(p+10,true),cs=v.getUint32(p+20,true),nl=v.getUint16(p+28,true),lo=v.getUint32(p+42,true),name=td.decode(new Uint8Array(buf,p+46,nl));p+=46+nl+v.getUint16(p+30,true)+v.getUint16(p+32,true);
@@ -162,7 +166,6 @@ Hooks.after=()=>{const el=document.querySelector('[data-live]');if(!el||!MAPSEGS
 /* ---------- Neue Fassung der App von selbst holen ---------- */
 // GitHub Pages lässt den Browser die Seite bis zu 10 Minuten zwischenspeichern. Darum beim Öffnen prüfen,
 // ob es eine neuere Fassung gibt, sie am Zwischenspeicher vorbei laden und einmal neu starten.
-const VERSION=/*VERSION*/'';
 async function checkVersion(){if(!VERSION)return;try{const v=(await (await fetch('version.txt',{cache:'no-store'})).text()).trim();if(!v||v===VERSION||v.length>80)return;
   let seen='';try{seen=sessionStorage.getItem('ss.v')||''}catch(e){}if(seen===v)return;const a=document.activeElement;if(a&&a.matches&&a.matches('.fld,[data-note]'))return;
   try{sessionStorage.setItem('ss.v',v)}catch(e){return}await fetch(location.pathname,{cache:'reload'}).catch(()=>{});location.reload()}catch(e){}}
