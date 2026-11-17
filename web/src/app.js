@@ -175,7 +175,7 @@ V.heute=()=>{
   <div class="stack">${Hooks.banner()}${h}${u?`<div class="undo b12 gr">${esc(u.t)} abgehakt. <button data-act="undo">Rückgängig</button></div>`:''}
     <div class="card"><div class="s26 ct">deine Woche</div><div class="days">${M.week.map(w=>`<div class="day"><span class="dot ${dotCls(w[1])}"></span><span class="b12">${w[0]}</span></div>`).join('')}</div></div>
     <div class="tiles">${tile(PROFIL.ziel?esc(PROFIL.ziel.name):'Ziel',daysToRace(),'Tage bis zum Start','or')}${tile('Diese Woche',kmTxt(km),`von ${kmTxt(M.wk.plan)} Kilometern`,'',bar(km,M.wk.plan))}</div>
-    ${REC.none?'':`<button class="erh" data-go="erholung"><div class="lab">Erholung · heute</div><div class="row"><span class="n50">${REC.energy??'–'}</span><span class="s21">von 100 Energie</span></div><div class="b13">Schlaf ${REC.sleep?REC.sleep+' h':'–'} · Ruhepuls ${REC.rhr?REC.rhr+' bpm':'–'}</div>
+    ${REC.none?'':`<button class="erh" data-go="erholung"><div class="lab">Erholung · ${REC.asof?'Stand '+REC.asof:'heute'}</div><div class="row"><span class="n50">${REC.energy??'–'}</span><span class="s21">von 100 Energie</span></div><div class="b13">Schlaf ${REC.sleep?REC.sleep+' h':'–'} · Ruhepuls ${REC.rhr?REC.rhr+' bpm':'–'}</div>
       <div class="days">${(REC.nights.length?REC.nights:Array(7).fill([0,null])).map(n=>n[1]==null?`<span class="dot" style="background:rgba(223,214,196,.14)"></span>`:`<span class="dot" style="background:rgba(223,214,196,${n[1]/100});color:${n[1]>=50?'var(--blx)':'var(--card)'}">${n[1]}</span>`).join('')}</div></button>`}
   </div></main>${nav('heute')}`};
 
@@ -259,8 +259,8 @@ function gymPage(g){const c=g.cmp;return `<main class="page detail nonav">${dhea
   <div class="card list"><div class="s26 ct">übungen</div><div class="rows">${c.rows.map(x=>`<div class="rw"><div><div class="s21">${esc(x[0])}</div><div class="b12">${x[1]}</div></div>${c.has?`<span class="chip ${x[3]}">${x[2]}</span>`:''}</div>`).join('')}</div></div>
   </div></main>`}
 
-V.erholung=()=>{if(REC.none)return `<main class="page">${head('Erholung')}<div class="stack">${hero({plain:1,lab:'Garmin',big:'Energie',val:'–',text:'In dieser Fassung gibt es noch keine Garmin-Daten. Garmin lässt sich nur über einen eigenen kleinen Server abfragen.'})}</div></main>${nav('erholung')}`;const R=REC,ph=R.phases,COL=['rgba(31,63,214,.9)','rgba(31,63,214,.45)','#17130F','rgba(110,101,87,.3)'];return `<main class="page">${head('Erholung')}<div class="stack">
-  ${hero({bl:1,lab:'Jetzt · Body Battery',big:'Energie',val:R.energy??'–',unit:'von 100',extra:`<div class="bar" style="height:10px;border-radius:5px;background:rgba(223,214,196,.3);margin-top:16px"><i style="width:${R.energy||0}%;background:var(--card);border-radius:5px"></i></div>`,text:R.energyText||'Garmin hat noch keinen Energiestand geschickt.'}).replace('class="b15"','class="b15" style="margin-top:16px"')}
+V.erholung=()=>{if(REC.none)return `<main class="page">${head('Erholung')}<div class="stack">${hero({plain:1,lab:'Garmin',big:'Energie',val:'–',text:'Noch keine Garmin-Daten. Unter «Ich» bei «daten» kannst du deinen Garmin-Export laden.'})}</div></main>${nav('erholung')}`;const R=REC,ph=R.phases,COL=['rgba(31,63,214,.9)','rgba(31,63,214,.45)','#17130F','rgba(110,101,87,.3)'];return `<main class="page">${head('Erholung')}<div class="stack">
+  ${hero({bl:1,lab:(R.asof?'Stand '+R.asof:'Jetzt')+' · Body Battery',big:'Energie',val:R.energy??'–',unit:'von 100',extra:`<div class="bar" style="height:10px;border-radius:5px;background:rgba(223,214,196,.3);margin-top:16px"><i style="width:${R.energy||0}%;background:var(--card);border-radius:5px"></i></div>`,text:R.energyText||'Garmin hat noch keinen Energiestand geschickt.'}).replace('class="b15"','class="b15" style="margin-top:16px"')}
   <div class="card" style="padding-bottom:24px"><div class="s26 ct">schlaf</div>${R.score?`<div class="lab cr">Schlafwert ${R.score}</div>`:''}
     ${R.sleep?`<div style="display:flex;align-items:baseline;gap:10px;margin-top:9px"><span class="n50">${R.sleep}</span><span class="s21">Stunden</span></div>${R.sleepNote?`<p class="b12 gr" style="margin-top:10px">${R.sleepNote}</p>`:''}
     ${ph?`<div class="seg" style="margin-top:15px">${ph.map((s,i)=>`<i style="flex:${s[2]};background:${COL[i]}"></i>`).join('')}</div>
@@ -268,7 +268,7 @@ V.erholung=()=>{if(REC.none)return `<main class="page">${head('Erholung')}<div c
     :`<p class="b15 gr" style="margin-top:15px">Für letzte Nacht ist bei Garmin noch kein Schlaf angekommen. Trag die Uhr nachts und synchronisiere sie am Morgen.</p>`}</div>
   <div class="card" style="padding-bottom:20px"><div class="s26 ct">sieben nächte</div><div class="lab cr">Schlafwert</div>
     <div class="days" style="margin-top:17px">${R.nights.map(n=>`<div class="day">${n[1]==null?'<span class="dot frei"></span>':`<span class="dot" style="background:rgba(31,63,214,${n[1]/100});color:${n[1]>=50?'var(--bg)':'var(--ink)'}">${n[1]}</span>`}<span class="b12" style="margin-top:8px">${n[0]}</span></div>`).join('')}</div></div>
-  ${kz([['Ruhepuls',R.rhr||'–','bpm'],['Stress',R.stress||'–','Ø heute'],['HRV',R.hrv||'–','ms']])}
+  ${kz([['Ruhepuls',R.rhr||'–','bpm'],['Stress',R.stress||'–',R.asof?'Ø Tag':'Ø heute'],['HRV',R.hrv||'–','ms']])}
   ${R.example?'<p class="b12 gr" style="padding:0 18px">Schlaf, Energiestand und HRV sind Beispielwerte, bis Garmin echte Daten liefert.</p>':''}
 </div></main>${nav('erholung')}`};
 

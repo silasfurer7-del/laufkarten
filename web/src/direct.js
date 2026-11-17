@@ -56,7 +56,32 @@ Hooks.daten=()=>{const on=!!sv().refresh,c=ST.cal,a=ST.acts;
   ${on?`<button class="pill sb13" style="margin-top:16px" data-act="reload">Neu laden</button><button class="pill sb13" style="margin-top:8px" data-act="trennen">Strava trennen</button>`
      :`${CID?'':'<input class="fld" id="cid" inputmode="numeric" autocomplete="off" placeholder="Client-ID">'}<input class="fld" id="csec" type="password" autocomplete="off" placeholder="Client-Geheimnis"><button class="pill sb13" style="margin-top:10px;background:var(--ink);color:var(--bg)" data-act="strava">Mit Strava verbinden</button>
        <p class="b12 gr" style="margin-top:10px">Beides steht auf strava.com/settings/api. Es wird nur auf diesem Gerät gespeichert.</p>`}
-  <div style="margin-top:14px"><div class="sb13">Garmin</div><div class="b12 gr" style="margin-top:2px">In dieser Fassung nicht verfügbar.</div></div></div>`};
+  <div style="margin-top:14px"><div class="sb13">Garmin</div><div class="b12 gr" style="margin-top:2px">${gm()?`Export geladen · Stand ${gm().rec.asof}`:'Kein Live-Abruf. Du kannst deinen Garmin-Export (ZIP) laden, er bleibt auf diesem Gerät.'}</div>${GMSG?`<div class="b12 or" style="margin-top:4px">${esc(GMSG)}</div>`:''}
+  <button class="pill sb13" style="margin-top:10px" data-act="garmin">${gm()?'Neuen Export laden':'Garmin-Export laden'}</button>${gm()?'<button class="pill sb13" style="margin-top:8px" data-act="garminweg">Garmin-Daten löschen</button>':''}</div></div>`};
+
+/* ---------- Garmin: Export-ZIP auf dem Gerät einlesen ---------- */
+let GMSG='';const gm=()=>mem.get('garmin',null);
+async function unzip(buf,want){const v=new DataView(buf),td=new TextDecoder(),out=[];let e=buf.byteLength-22;while(e>=0&&v.getUint32(e,true)!==0x06054b50)e--;if(e<0)throw new Error('Das ist keine ZIP-Datei.');
+  let p=v.getUint32(e+16,true);const cnt=v.getUint16(e+10,true);
+  for(let i=0;i<cnt&&v.getUint32(p,true)===0x02014b50;i++){const method=v.getUint16(p+10,true),cs=v.getUint32(p+20,true),nl=v.getUint16(p+28,true),lo=v.getUint32(p+42,true),name=td.decode(new Uint8Array(buf,p+46,nl));p+=46+nl+v.getUint16(p+30,true)+v.getUint16(p+32,true);
+    if(!want.test(name))continue;const raw=new Uint8Array(buf,lo+30+v.getUint16(lo+26,true)+v.getUint16(lo+28,true),cs);
+    out.push([name,method===0?td.decode(raw):await new Response(new Blob([raw]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).text()])}
+  return out}
+function garminRec(files){const all=re=>files.filter(f=>re.test(f[0])).flatMap(f=>{try{const j=JSON.parse(f[1]);return Array.isArray(j)?j:[]}catch(e){return []}}),byDate=a=>a.filter(x=>x&&x.calendarDate).sort((x,y)=>x.calendarDate<y.calendarDate?-1:1),num=v=>typeof v==='number'?Math.round(v):null;
+  const sl=byDate(all(/sleepData\.json$/)).filter(x=>x.sleepStartTimestampGMT),days=byDate(all(/UDSFile[^/]*\.json$/)),hs=byDate(all(/healthStatusData\.json$/));
+  if(!sl.length&&!days.length)throw new Error('Im ZIP sind keine Schlaf- oder Tagesdaten von Garmin Connect.');
+  const d=days[days.length-1]||{},last=sl[sl.length-1],bb=d.bodyBattery||{},stat=t=>{const q=(bb.bodyBatteryStatList||[]).find(x=>x.bodyBatteryStatType===t);return q?num(q.statsValue):null},st=((d.allDayStress||{}).aggregatorList||[]).find(x=>x.type==='TOTAL');
+  const end=[d.calendarDate,last&&last.calendarDate].filter(Boolean).sort().pop(),[Y,Mo,D]=end.split('-').map(Number),e0=new Date(Y,Mo-1,D),sc=x=>x&&x.sleepScores?num(x.sleepScores.overallScore):null;
+  const nights=[];for(let i=6;i>=0;i--){const dt=addD(e0,-i),row=sl.find(x=>x.calendarDate===ymd(dt));nights.push([DOW[dt.getDay()].toUpperCase(),sc(row)])}
+  const cur=last&&last.calendarDate===end?last:null,secs=cur?(cur.deepSleepSeconds||0)+(cur.lightSleepSeconds||0)+(cur.remSleepSeconds||0):0,hv=hs.filter(x=>x.calendarDate===end).flatMap(x=>x.metrics||[]).find(m=>m.type==='HRV'),wake=stat('SLEEPEND'),ch=num(bb.chargedValue),dr=num(bb.drainedValue);
+  return {asof:D+'.'+Mo+'.',energy:stat('MOSTRECENT'),energyText:[wake!=null?`Aufgewacht mit ${wake}.`:'',ch!=null?`${ch} geladen, ${dr??0} verbraucht.`:''].filter(Boolean).join(' '),sleep:secs?hmm(secs):null,score:sc(cur),rhr:num(d.restingHeartRate),stress:st?num(st.averageStressLevel):null,hrv:hv?num(hv.value):null,nights,
+    phases:secs?[['Tief',cur.deepSleepSeconds],['Leicht',cur.lightSleepSeconds],['REM',cur.remSleepSeconds],['Wach',cur.awakeSleepSeconds]].map(q=>[q[0],hmm(q[1]||0),Math.max(1,Math.round((q[1]||0)/60))]):null}}
+function useGarmin(){const g=gm();RAW.rec=g&&g.rec||null;ST.rec=g?{s:'live',at:g.at}:{s:'aus'}}
+ACT.garmin=()=>{const old=document.getElementById('gzip');if(old)old.remove();const i=document.createElement('input');i.type='file';i.id='gzip';i.accept='.zip,application/zip';i.style.cssText='position:fixed;left:-9999px;top:0;opacity:0';document.body.appendChild(i);
+  i.onchange=async()=>{const f=i.files&&i.files[0];i.remove();if(!f)return;GMSG='Wird gelesen …';render(true);
+    try{const files=await unzip(await f.arrayBuffer(),/(sleepData|healthStatusData|UDSFile[^/]*)\.json$/);mem.set('garmin',{at:Date.now(),rec:garminRec(files)});GMSG=''}catch(e){GMSG=e.message||'Die Datei konnte nicht gelesen werden.'}
+    useGarmin();rebuild();render(true)};i.click()};
+ACT.garminweg=()=>{mem.set('garmin',null);GMSG='';useGarmin();rebuild();render(true)};
 
 /* ---------- Karten live aus den PMTiles ---------- */
 const SW={motorway:2.6,trunk:2.4,primary:2.2,secondary:2,tertiary:1.7,residential:1.2,unclassified:1.2,living_street:1.2,pedestrian:1,service:.7},DASH=['track','path','footway','cycleway','steps'];
@@ -92,6 +117,6 @@ Hooks.after=()=>{const el=document.querySelector('[data-live]');if(!el||!MAPSEGS
   LIVE.push(map)};
 
 /* ---------- Start ---------- */
-(async()=>{const c=mem.get('acts',null),pl=mem.get('plan',null);if(pl&&pl.events)setPlan(pl);else ST.cal={s:'laden'};if(c&&c.list&&sv().refresh){RAW.acts=c.list;lastLoad=c.at;ST.acts={s:'live',at:c.at}}rebuild();
+(async()=>{const c=mem.get('acts',null),pl=mem.get('plan',null);if(pl&&pl.events)setPlan(pl);else ST.cal={s:'laden'};useGarmin();if(c&&c.list&&sv().refresh){RAW.acts=c.list;lastLoad=c.at;ST.acts={s:'live',at:c.at}}rebuild();
   await oauthReturn();render();loadFiles();loadStrava()})();
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-lastLoad>90e3){loadFiles();loadStrava()}});
