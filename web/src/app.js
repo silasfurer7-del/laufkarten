@@ -36,7 +36,7 @@ const localDate=s=>{const m=String(s).match(/^(\d+)-(\d+)-(\d+)T(\d+):(\d+)/);re
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 /* ---------- Kalender lesen ---------- */
-const kindOf=s=>/lauf|interval|\brun\b|jog/i.test(s)?'run':/push|pull|beine|\bleg|gym|kraft/i.test(s)?'gym':null;
+const kindOf=s=>/lauf|interval|\brun\b|jog/i.test(s)?'run':/push|pull|beine|\bleg|gym|kraft|oberk|unterk|ganzk/i.test(s)?'gym':null;
 function parseIv(t){const m=t.match(/(\d+)\s*[×x]\s*(\d+)\s*m?/i);if(!m)return null;const num=x=>parseFloat(String(x).replace(',','.'));
  const pace=(t.match(/@\s*(\d{1,2}:\d\d)/)||[])[1]||'',pause=(t.match(/(\d+)\s*min\s*(?:trab)?pause/i)||t.match(/(\d+)\s*min(?:uten)?\s*traben/i)||[])[1]||'';
  const warm=num((t.match(/(\d+(?:[.,]\d+)?)\s*km\s*(?:einlaufen|warm)/i)||[])[1]||0),c=t.match(/(\d+(?:[.,]\d+)?)(?:\s*[–-]\s*(\d+(?:[.,]\d+)?))?\s*km\s*(?:auslaufen|cool)/i),cool=c?num(c[2]||c[1]):0;
@@ -101,7 +101,7 @@ function build(calEvents,acts,now){
   for(const e of day)M.days.push(e)}
  evs.forEach((e,n)=>{if(e.k==='run')e.go='geplant-'+n});M.evs=evs;M.days.forEach((d,i)=>{d.i=i});
  M.week=[];for(let i=0;i<7;i++){const k=ymd(addD(mon,i)),ks=new Set(week.filter(e=>e.key===k).map(e=>e.k));M.week.push([DOW[(i+1)%7].toUpperCase(),ks.size>1?'both':ks.has('run')?'run':ks.has('gym')?'gym':'frei'])}
- const sun=addD(mon,6);M.weekTitle=mon.getMonth()===sun.getMonth()?`${mon.getDate()}. – ${sun.getDate()}. ${MON[sun.getMonth()]}`:`${mon.getDate()}. ${MON[mon.getMonth()].slice(0,3)}. – ${sun.getDate()}. ${MON[sun.getMonth()].slice(0,3)}.`;
+ const wTitle=a=>{const b=addD(a,6);return a.getMonth()===b.getMonth()?`${a.getDate()}. – ${b.getDate()}. ${MON[b.getMonth()]}`:`${a.getDate()}. ${MON[a.getMonth()].slice(0,3)}. – ${b.getDate()}. ${MON[b.getMonth()].slice(0,3)}.`};M.weekTitle=wTitle(mon);
  const wkRuns=runs.filter(r=>inRange(r.d,mon,wEnd)&&!r.hide);
  M.wk={km:wkRuns.reduce((s,r)=>s+r.dist,0),plan:week.filter(e=>e.k==='run').reduce((s,e)=>s+(e.km||0),0),runs:wkRuns.length,planRuns:week.filter(e=>e.k==='run').length};
  const upcoming=evs.filter(e=>e.key>=tk);
@@ -115,6 +115,20 @@ function build(calEvents,acts,now){
  const cal={title:MON[today.getMonth()],lead:(mStart.getDay()+6)%7,n:new Date(today.getFullYear(),today.getMonth()+1,0).getDate(),run:[],gym:[],both:[]};
  for(let d=1;d<=cal.n;d++){const k=ymd(new Date(today.getFullYear(),today.getMonth(),d));if(k>tk)break;const r=mRuns.some(x=>x.key===k),g=mGyms.some(x=>x.key===k);if(r&&g)cal.both.push(d);else if(r)cal.run.push(d);else if(g)cal.gym.push(d)}
  M.cal=cal;
+ /* Blättern: andere Woche, anderer Monat */
+ const wkOff=d=>Math.round((monday(d)-mon)/6048e5),moOff=d=>(d.getFullYear()-today.getFullYear())*12+d.getMonth()-today.getMonth(),oldest=A.length?A[A.length-1].d:today;
+ M.woMin=evs.length?Math.min(0,wkOff(evs[0].date)):0;M.woMax=evs.length?Math.max(0,wkOff(evs[evs.length-1].date)):0;
+ M.moMin=Math.min(0,moOff(oldest));M.moMax=evs.length?Math.max(0,moOff(evs[evs.length-1].date)):0;
+ M.weekAt=o=>{if(!o)return {o:0,days:M.days,title:M.weekTitle,wk:M.wk};const a=addD(mon,7*o),b=addD(a,7),wk=evs.filter(e=>inRange(e.date,a,b)),days=[];
+  for(let i=0;i<7;i++){const d=addD(a,i),k=ymd(d),day=wk.filter(e=>e.key===k);if(!day.length)days.push({id:'frei-'+k,k:'frei',key:k,date:d,lab:`${DOW[d.getDay()]} ${d.getDate()}`,t:'Frei',v:'Ruhetag',sub:'Erholung'});for(const e of day)days.push(e)}
+  const rr=runs.filter(r=>inRange(r.d,a,b)&&!r.hide);
+  return {o,days,title:wTitle(a),wk:{km:rr.reduce((x,r)=>x+r.dist,0),plan:wk.filter(e=>e.k==='run').reduce((x,e)=>x+(e.km||0),0),runs:rr.length,planRuns:wk.filter(e=>e.k==='run').length}}};
+ M.calAt=o=>{if(!o)return {...cal,o:0,mo:M.mo};const y=today.getFullYear(),a=new Date(y,today.getMonth()+o,1),b=new Date(a.getFullYear(),a.getMonth()+1,1),n=new Date(a.getFullYear(),a.getMonth()+1,0).getDate(),rr=runs.filter(r=>inRange(r.d,a,b)&&!r.hide),gg=gyms.filter(g=>inRange(g.d,a,b));
+  const c={o,title:MON[a.getMonth()]+(a.getFullYear()!==y?' '+a.getFullYear():''),lead:(a.getDay()+6)%7,n,run:[],gym:[],both:[]};
+  for(let d=1;d<=n;d++){const k=ymd(new Date(a.getFullYear(),a.getMonth(),d));if(k>tk)break;const r=rr.some(x=>x.key===k),g=gg.some(x=>x.key===k);if(r&&g)c.both.push(d);else if(r)c.run.push(d);else if(g)c.gym.push(d)}
+  c.mo={name:MON[a.getMonth()],km:f1(rr.reduce((x,r)=>x+r.dist,0)),runs:rr.length,gyms:gg.length,units:rr.length+gg.length};return c};
+ /* Serie: Wochen in Folge mit mindestens einem Training */
+ {const has=a=>A.some(x=>inRange(x.d,a,addD(a,7)));let n=0,w=has(mon)?mon:addD(mon,-7);while(has(w)&&n<520){n++;w=addD(w,-7)}M.serie=n;M.serieOffen=n>0&&w<monday(oldest);M.hasActs=A.length>0}
  /* Verlauf pro Woche */
  const weeks=(list,n,val)=>{const cur=list.some(x=>inRange(x.d,mon,wEnd));const last=cur?mon:addD(mon,-7),out=[];for(let i=n-1;i>=0;i--){const a=addD(last,-7*i),b=addD(a,7);out.push([val(list.filter(x=>inRange(x.d,a,b))),dm(a)])}return out};
  M.kmWeek=weeks(runs,8,l=>Math.round(l.reduce((s,r)=>s+r.dist,0)));M.kmAvg=Math.round(M.kmWeek.reduce((s,w)=>s+w[0],0)/8);
@@ -138,9 +152,9 @@ const NOREC={energy:null,sleep:null,rhr:null,stress:null,hrv:null,nights:[],phas
 let M=build(HAS_SNAP?SNAP.cal:[],HAS_SNAP?SNAP.acts:[],HAS_SNAP?SNAP_NOW:new Date()),REC=HAS_SNAP?SNAP.rec:NOREC,HR={};
 function rebuild(){if(!S.openUser)S.open=null;const live=RAW.cal||RAW.acts;M=build(RAW.cal||(HAS_SNAP?SNAP.cal:[]),RAW.acts||(HAS_SNAP?SNAP.acts:[]),RAW.cal||!HAS_SNAP?new Date():SNAP_NOW);M.live=!!live||!HAS_SNAP;REC=RAW.rec||(HAS_SNAP?SNAP.rec:NOREC)}
 const isDone=it=>!!(it&&(it.auto||S.done[it.id]));
-const weekKm=()=>M.wk.km+M.days.filter(d=>d.k==='run'&&S.done[d.id]&&!d.auto).reduce((s,d)=>s+(d.km||0),0);
-const weekRuns=()=>M.wk.runs+M.days.filter(d=>d.k==='run'&&S.done[d.id]&&!d.auto).length;
-const defaultOpen=()=>{const i=M.days.findIndex(d=>d.k!=='frei'&&d.key>=M.todayKey&&!isDone(d));return i<0?Math.max(0,M.days.findIndex(d=>d.key===M.todayKey)):i};
+const weekKm=(W=M.weekAt(0))=>W.wk.km+W.days.filter(d=>d.k==='run'&&S.done[d.id]&&!d.auto).reduce((s,d)=>s+(d.km||0),0);
+const weekRuns=(W=M.weekAt(0))=>W.wk.runs+W.days.filter(d=>d.k==='run'&&S.done[d.id]&&!d.auto).length;
+const defaultOpen=(W=M.weekAt(0))=>{const i=W.days.findIndex(d=>d.k!=='frei'&&d.key>=M.todayKey&&!isDone(d));return i<0?Math.max(0,W.o?W.days.findIndex(d=>d.k!=='frei'):W.days.findIndex(d=>d.key===M.todayKey)):i};
 
 /* ---------- Bausteine ---------- */
 const ic=(p,s=22,w=1.8)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
@@ -153,7 +167,7 @@ const NAV=[['heute','Heute'],['plan','Plan'],['training','Training'],['erholung'
 const nav=a=>`<div class="fix"><div class="in"><nav class="nav">${NAV.map(n=>`<button data-go="${n[0]}" class="${n[0]===a?'on':''}" aria-label="${n[1]}">${ic(IC[n[0]])}</button>`).join('')}</nav></div></div>`;
 const bar=(v,max)=>`<div class="bar"><i style="width:${Math.min(100,max?v/max*100:0)}%"></i></div>`;
 const chart=(a,bw,col,ops)=>{const max=Math.max(1,...a.map(q=>q[0]));return `<div class="chart">${a.map((q,i)=>{const h=q[0]?Math.max(8,q[0]/max*96):6;return `<div class="c" style="width:${bw}px"><span class="b12">${q[0]}</span><i style="height:${h}px;border-radius:${q[0]?7:3}px;background:${q[0]?col:'var(--gr)'};opacity:${q[0]?ops(q[0],i,max):.25}"></i></div>`}).join('')}</div><div class="cdates">${a.map(q=>`<span style="width:${bw}px">${q[1]}</span>`).join('')}</div>`};
-const more=(on,act,n)=>n>3?`<button class="pill sb13" data-act="${act}">${on?'Weniger zeigen':'Mehr laden'}</button>`:'';
+const more=(shown,act,n)=>n>3?`<button class="pill sb13" data-act="${act}">${shown>=n?'Weniger zeigen':'Mehr laden'}</button>`:'';
 const dotCls=k=>k==='both'?'both':k;
 const daysToRace=()=>Math.max(0,Math.ceil((RACE-new Date(M.now.getFullYear(),M.now.getMonth(),M.now.getDate()))/864e5));
 const splitVal=v=>{const m=String(v).match(/^([\d.,:]+)\s+(\S.*)$/);return m?{val:m[1],unit:m[2]}:{val:v}};
@@ -183,41 +197,42 @@ const item=(d,i,open)=>`<button class="it ${d.k} ${open?'open':''}" data-act="op
   <div class="co"><span class="dot ${d.k}"></span><span class="lab">${esc(d.lab)}</span><span class="s21">${esc(d.t)}</span>${d.val?`<div class="v ${d.vs?'':'mid'}"><div class="n20">${esc(d.val)}</div>${d.vs?`<div class="b12">${d.vs}</div>`:''}</div>`:''}</div>
   <div class="op"><div class="lab">${esc(d.lab)}${isDone(d)?' · erledigt':''}</div><div class="t">${esc(d.t)}</div><div class="n44">${esc(d.v)}</div><div class="b15 cut">${esc(d.sub||'')}</div></div></button>`;
 const planHead=a=>head('Plan',`<div class="toggle"><button data-go="plan" class="${a?'':'on'}">Woche</button><button data-go="plan-monat" class="${a?'on':''}">Monat</button></div>`,'pl');
-const sw=t=>`<div class="sw"><span class="round">${ic(IC.l)}</span><span class="s26">${t}</span><span class="round">${ic(IC.r)}</span></div>`;
-V.plan=()=>{if(S.open==null||S.open>=M.days.length)S.open=defaultOpen();const km=weekKm();return `<main class="page">${planHead(0)}${sw(M.weekTitle)}
-  <div class="acc">${M.days.map((d,i)=>item(d,i,i===S.open)).join('')}</div>
-  <div class="tiles" style="margin-top:16px">${tile('Diese Woche',kmTxt(km),`von ${kmTxt(M.wk.plan)} Kilometern`,'',bar(km,M.wk.plan))}${tile('Läufe',weekRuns(),`von ${M.wk.planRuns} erledigt`,'or')}</div></main>${nav('plan')}`};
-V['plan-monat']=()=>{const c=M.cal;let cells='';for(let i=0;i<c.lead;i++)cells+='<span></span>';
+const sw=(t,act,l,r)=>`<div class="sw"><button class="round" data-act="${act}" data-d="-1" aria-label="Zurück" ${l?'':'disabled'}>${ic(IC.l)}</button><span class="s26">${t}</span><button class="round" data-act="${act}" data-d="1" aria-label="Weiter" ${r?'':'disabled'}>${ic(IC.r)}</button></div>`;
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+V.plan=()=>{S.wo=clamp(S.wo||0,M.woMin,M.woMax);const W=M.weekAt(S.wo);if(S.open==null||S.open>=W.days.length)S.open=defaultOpen(W);const km=weekKm(W);return `<main class="page">${planHead(0)}${sw(W.title,'wk',S.wo>M.woMin,S.wo<M.woMax)}
+  <div class="acc">${W.days.map((d,i)=>item(d,i,i===S.open)).join('')}</div>
+  <div class="tiles" style="margin-top:16px">${tile(S.wo?'Kilometer':'Diese Woche',kmTxt(km),`von ${kmTxt(W.wk.plan)} Kilometern`,'',bar(km,W.wk.plan))}${tile('Läufe',weekRuns(W),`von ${W.wk.planRuns} erledigt`,'or')}</div></main>${nav('plan')}`};
+V['plan-monat']=()=>{S.mo=clamp(S.mo||0,M.moMin,M.moMax);const c=M.calAt(S.mo);let cells='';for(let i=0;i<c.lead;i++)cells+='<span></span>';
   for(let d=1;d<=c.n;d++){const k=c.run.includes(d)?'run':c.gym.includes(d)?'gym':c.both.includes(d)?'both':'';cells+=`<span class="dot ${k}">${d}</span>`}
-  const it=M.upcoming.find(x=>!isDone(x));
-  return `<main class="page">${planHead(1)}${sw(c.title)}<div class="stack">
+  const it=S.mo?null:M.upcoming.find(x=>!isDone(x));
+  return `<main class="page">${planHead(1)}${sw(c.title,'mo',S.mo>M.moMin,S.mo<M.moMax)}<div class="stack">
   <div class="card"><div class="calh lab">${['Mo','Di','Mi','Do','Fr','Sa','So'].map(w=>`<span>${w}</span>`).join('')}</div><div class="cal">${cells}</div>
     <div class="leg b12"><span><i style="background:var(--or)"></i>Lauf</span><span><i style="background:var(--bl)"></i>Gym</span></div></div>
   ${it?`<button class="it ${it.k} open" ${it.go?`data-go="${it.go}"`:''}><div class="op"><div class="lab">${esc(it.lab)}</div><div class="t">${esc(it.t)}</div><div class="n44">${esc(it.v)}</div><div class="b15 cut">${esc(it.sub||'')}</div></div></button>`:''}
-  <div class="tiles">${tile('Im '+M.mo.name,M.mo.km,'Kilometer gelaufen','or')}${tile('Einheiten',M.mo.units,`${M.mo.runs} Läufe, ${M.mo.gyms} Mal Gym`)}</div>
+  <div class="tiles">${tile('Im '+c.mo.name,c.mo.km,'Kilometer gelaufen','or')}${tile('Einheiten',c.mo.units,`${c.mo.runs} Läufe, ${c.mo.gyms} Mal Gym`)}</div>
   </div></main>${nav('plan')}`};
 
 V.training=()=>`<main class="page">${head('Training')}<div class="choice"><button data-go="laufen" style="background:var(--or)" aria-label="Laufen">${ic(IC.run,168,1.5)}</button><button data-go="gym" style="background:var(--bl)" aria-label="Gym">${ic(IC.bar,168,1.5)}</button></div></main>${nav('training')}`;
 
-V.laufen=()=>{const rs=S.moreRuns?M.runs:M.runs.slice(0,3),n=M.nextRun;
+V.laufen=()=>{const rs=M.runs.slice(0,S.nRuns||3),n=M.nextRun;
   const sv=n?splitVal(n.v):null;const h=n?hero({go:n.go,lab:`Nächster Lauf · ${n.key===M.todayKey?'Heute':DOW[n.date.getDay()]+' '+n.date.getDate()} ${n.time}`,big:esc(n.t),val:esc(sv.val),unit:sv.unit,text:n.sub}):hero({plain:1,lab:'Nächster Lauf',big:'Offen',val:'–',text:'Im Kalender steht kein weiterer Lauf.'});
   return `<main class="page">${head('Laufen')}<div class="stack">${h}
   <div class="card"><div class="s26 ct">kilometer pro woche</div><div class="lab cr">Ø ${M.kmAvg} km</div>${chart(M.kmWeek,28,'var(--or)',(k,i,max)=>i===7?1:k>=max*.6?.5:.25)}</div>
   <div class="tiles">${tile('Ø Pace',M.mo.pace,'im '+M.mo.name)}${tile('Gesamt',M.mo.km,'km im '+M.mo.name)}</div>
   <div class="tiles">${tile('Längster Lauf',f1(M.longest),'von 60 Kilometern','or')}${tile('Läufe',M.mo.runs,'im '+M.mo.name)}</div>
-  <div class="card"><div class="s26 ct">letzte läufe</div><div class="lrows">${rs.map(r=>`<button class="lr" data-go="lauf-${r.id}"><div><div class="s21 cut">${esc(r.lt)}</div><div class="b12">${r.ls}</div></div><div class="n20">${r.km} km</div></button>`).join('')||'<p class="b15 gr">Noch keine Läufe.</p>'}</div>${more(S.moreRuns,'moreRuns',M.runs.length)}</div>
+  <div class="card"><div class="s26 ct">letzte läufe</div><div class="lrows">${rs.map(r=>`<button class="lr" data-go="lauf-${r.id}"><div><div class="s21 cut">${esc(r.lt)}</div><div class="b12">${r.ls}</div></div><div class="n20">${r.km} km</div></button>`).join('')||'<p class="b15 gr">Noch keine Läufe.</p>'}</div>${more(S.nRuns||3,'moreRuns',M.runs.length)}</div>
   </div></main>${nav('training')}`};
-V.gym=()=>{const gs=S.moreGym?M.gyms:M.gyms.slice(0,3),n=M.nextGym;let h;
+V.gym=()=>{const gs=M.gyms.slice(0,S.nGym||3),n=M.nextGym;let h;
   if(n){const sv=splitVal(n.v);h=hero({bl:1,lab:`Nächstes Training · ${n.key===M.todayKey?'Heute':DOW[n.date.getDay()]+' '+n.date.getDate()}`,big:esc(n.t),val:esc(sv.val),unit:sv.unit,text:n.text||n.sub})}
   else h=hero({bl:1,lab:'Nächstes Training',big:'Offen',val:'–',text:'Im Kalender steht kein weiteres Gym-Training.'});
   return `<main class="page">${head('Gym')}<div class="stack">${h}
   <div class="card"><div class="s26 ct">einheiten pro woche</div><div class="lab cr">Ø ${M.gymAvg}</div>${chart(M.gymWeek,36,'var(--blx)',(k,i)=>i===5?.9:.45)}</div>
   <div class="tiles">${tile('Ø Dauer',M.mo.gymAvg,'Stunden')}${tile('Gesamt',M.mo.gyms,'im '+M.mo.name,'blu')}</div>
-  <div class="card"><div class="s26 ct">letzte trainings</div><div class="lrows">${gs.map(g=>`<${g.cmp?`button data-go="gym-${g.id}"`:'div'} class="lr"><div><div class="s21">${esc(g.t)}</div><div class="b12">${g.ls}</div></div><div class="n20">${g.dur} h</div></${g.cmp?'button':'div'}>`).join('')||'<p class="b15 gr">Noch keine Trainings.</p>'}</div>${more(S.moreGym,'moreGym',M.gyms.length)}</div>
+  <div class="card"><div class="s26 ct">letzte trainings</div><div class="lrows">${gs.map(g=>`<${g.cmp?`button data-go="gym-${g.id}"`:'div'} class="lr"><div><div class="s21">${esc(g.t)}</div><div class="b12">${g.ls}</div></div><div class="n20">${g.dur} h</div></${g.cmp?'button':'div'}>`).join('')||'<p class="b15 gr">Noch keine Trainings.</p>'}</div>${more(S.nGym||3,'moreGym',M.gyms.length)}</div>
   </div></main>${nav('training')}`};
 
 /* geplanter Lauf */
-function planned(it){const iv=it.iv,rt=it.route&&ROUTES[it.route];let abl='',k;
+function planned(it){const iv=it.iv,alt=it.route&&Maps.alt?Maps.alt(it.route):null,rt=alt?alt.rt:it.route&&ROUTES[it.route];let abl='',k;
   if(iv){const cols=['70fr','8fr'],cells=['<i class="e"></i>','<b></b>'];for(let i=0;i<iv.reps;i++){cols.push('34fr');cells.push('<i class="b"><span>Intervall</span></i>');if(i<iv.reps-1){cols.push('6fr','10fr','6fr');cells.push('<b></b>','<i class="p"></i>','<b></b>')}}cols.push('8fr','29fr');cells.push('<b></b>','<i class="e"></i>');
    abl=`<div class="card" style="padding-bottom:22px"><div class="s26 ct">ablauf</div><div class="abl" style="grid-template-columns:${cols.join(' ')}">${cells.join('')}</div>
     <div class="cap b12" style="margin-top:10px"><span>${iv.warm?kmTxt(iv.warm)+' km ein':'ein'}</span><span class="m">${iv.reps} × ${iv.dist} m</span><span>aus</span></div>
@@ -227,7 +242,7 @@ function planned(it){const iv=it.iv,rt=it.route&&ROUTES[it.route];let abl='',k;
   const sv=splitVal(it.v);
   return `<main class="page detail cta">${dhead(longDate(it.date))}<div class="stack">
   ${hero({lab:it.time+(it.loc?' · '+esc(it.loc):''),big:esc(it.t),val:esc(sv.val),unit:sv.unit,text:it.desc})}${abl}${kz(k)}
-  ${rt?`<div class="card"><div class="s26 ct">route</div><span class="tag sb13">Andere Route</span>
+  ${rt?`<div class="card"><div class="s26 ct">route</div>${alt?`<button class="tag sb13" data-act="route" data-k="${it.route}">Andere Route</button>`:''}
     ${Maps.route(it.route,rt)}
     <div style="display:flex;align-items:flex-start;margin-top:14px"><span class="n20">${rt[0]} km</span><span class="n20" style="margin-left:18px">${rt[1]} Hm</span></div>
     <a class="pill sb13" style="margin-top:15px" href="https://www.google.com/maps/dir/?api=1&origin=${rt[3]}&destination=${rt[3]}&waypoints=${rt[4]}&travelmode=walking" target="_blank" rel="noopener">In Google Maps öffnen ${ic(IC.out,18)}</a></div>`:''}
@@ -272,13 +287,13 @@ V.erholung=()=>{if(REC.none)return `<main class="page">${head('Erholung')}<div c
   ${R.example?'<p class="b12 gr" style="padding:0 18px">Schlaf, Energiestand und HRV sind Beispielwerte, bis Garmin echte Daten liefert.</p>':''}
 </div></main>${nav('erholung')}`};
 
-V.ich=()=>{const z=PROFIL.ziel||{};return `<main class="page">${head(esc(PROFIL.name||'Ich'))}<div class="stack">
+V.ich=()=>{const z=PROFIL.ziel||{},best=(Hooks.best&&Hooks.best())||BEST,maxP=(Hooks.maxPuls&&Hooks.maxPuls())||PROFIL.maxPuls,serie=M.hasActs?M.serie+(M.serieOffen?'+':''):PROFIL.serie;return `<main class="page">${head(esc(PROFIL.name||'Ich'))}<div class="stack">
   ${z.name?hero({lab:'Ziel · '+new Date(z.datum+'T00:00:00').toLocaleDateString('de-CH',{day:'numeric',month:'long',year:'numeric'}),big:esc(z.wort||'Ziel'),val:esc(z.wert||''),unit:z.einheit,text:`Noch ${daysToRace()} Tage bis zum Start.`}):''}
-  <div class="tiles">${tile('Max-Puls',PROFIL.maxPuls||'–','Schläge','or')}${tile('Serie',PROFIL.serie||'–','Wochen')}</div>
+  <div class="tiles">${tile('Max-Puls',maxP||'–','Schläge','or')}${tile('Serie',serie||'–',serie===1?'Woche':'Wochen')}</div>
   <div class="card" style="padding-bottom:28px"><div class="s26 ct">pulszonen</div><div class="lab cr">locker bis ${ZB[1]}</div>
     <div class="seg" style="margin-top:17px">${ZONES.map(z=>`<i style="flex:${z[3]};background:${z[4]}"></i>`).join('')}</div>
     <div style="margin-top:20px">${ZONES.map((z,i)=>`<div class="zr sb13" style="${i?'margin-top:18px':''}"><span class="sq" style="background:${z[4]}"></span><span style="width:28px">${z[0]}</span><span class="nm gr">${z[1]}</span><span>${z[2]}</span></div>`).join('')}</div></div>
-  ${BEST.length?`<div class="card list"><div class="s26 ct">bestzeiten</div><div class="rows">${BEST.map(b=>`<div class="rw"><div><div class="s21">${esc(b[0])}</div><div class="b12">${esc(b[1])}</div></div><div class="n20">${esc(b[2])}</div></div>`).join('')}</div></div>`:''}
+  ${best.length?`<div class="card list"><div class="s26 ct">bestzeiten</div><div class="rows">${best.map(b=>`<div class="rw"><div><div class="s21">${esc(b[0])}</div><div class="b12">${esc(b[1])}</div></div><div class="n20">${esc(b[2])}</div></div>`).join('')}</div></div>`:''}
   ${Hooks.daten()}
 </div></main>${nav('ich')}`};
 V.leer=()=>`<main class="page">${head('Nicht gefunden')}<p class="b15 gr" style="padding:0 18px">Diese Seite gibt es nicht mehr.</p></main>${nav('')}`;
@@ -295,7 +310,7 @@ function fit(){document.querySelectorAll('.hero .big,.op .t').forEach(el=>{el.st
 function render(keep){const a=document.activeElement;if(keep&&a&&a.matches&&a.matches('[data-note],.fld')){dirty=true;return}dirty=false;const y=window.scrollY;Hooks.before&&Hooks.before();document.getElementById('app').innerHTML=view(route());fit();Hooks.after();window.scrollTo(0,keep?y:0)}
 function go(r){if(r===route()){render();return}S.stack.push(route());location.hash=r}
 function back(){location.hash=S.stack.pop()||'heute'}
-window.addEventListener('hashchange',()=>{if(!S.keep)S.lastDone=null;S.keep=false;render()});
+window.addEventListener('hashchange',()=>{if(!S.keep)S.lastDone=null;S.keep=false;if(!/^(plan|geplant)/.test(route())){S.wo=0;S.mo=0}render()});
 document.addEventListener('click',e=>{const a=e.target.closest('[data-act]');if(a){e.stopPropagation();act(a.dataset.act,a);return}
   if(e.target.closest('[data-note],a[href],.fld'))return;const g=e.target.closest('[data-go]');if(g)go(g.dataset.go)});
 document.addEventListener('input',e=>{if(e.target.matches('[data-note]')){S.notes[e.target.dataset.note]=e.target.value;mem.set('notes',S.notes)}});
@@ -306,7 +321,10 @@ const ACT={
   note(){S.noteOpen=!S.noteOpen;render(true);const t=document.querySelector('[data-note]');if(t&&S.noteOpen)t.focus()},
   back(){back()},
   open(el){const i=+el.dataset.i;if(S.open===i){if(el.dataset.to)go(el.dataset.to);return}S.open=i;S.openUser=true;document.querySelectorAll('.it[data-i]').forEach(x=>x.classList.toggle('open',+x.dataset.i===i))},
-  moreRuns(){S.moreRuns=!S.moreRuns;render(true)},moreGym(){S.moreGym=!S.moreGym;render(true)},
+  moreRuns(){S.nRuns=(S.nRuns||3)>=M.runs.length?3:(S.nRuns||3)+12;render(true)},moreGym(){S.nGym=(S.nGym||3)>=M.gyms.length?3:(S.nGym||3)+12;render(true)},
+  wk(el){S.wo=clamp((S.wo||0)+(+el.dataset.d),M.woMin,M.woMax);S.open=null;S.openUser=false;render(true)},
+  mo(el){S.mo=clamp((S.mo||0)+(+el.dataset.d),M.moMin,M.moMax);render(true)},
+  route(el){if(Maps.next)Maps.next(el.dataset.k)},
 };
 function act(n,el){if(ACT[n])ACT[n](el)}
 setInterval(()=>{const c=document.getElementById('clock');if(c)c.textContent=clock()},20000);

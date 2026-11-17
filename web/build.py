@@ -24,9 +24,39 @@ def routen(karten):
         pts = [[round(float(a), 5), round(float(b), 5)] for a, b in re.findall(r'lat="([\d.]+)" lon="([\d.]+)"', open(gpx).read())]
         if not m or len(pts) < 2:
             continue
-        schritt = max(1, -(-len(pts) // 240))
-        aus[name] = {'km': m.group(1), 'hm': m.group(2), 'pts': pts[::schritt] + ([pts[-1]] if (len(pts) - 1) % schritt else [])}
+        aus[name] = {'km': m.group(1), 'hm': m.group(2), 'pts': duenn(pts)}
     return aus
+
+
+def duenn(pts, n=240):
+    schritt = max(1, -(-len(pts) // n))
+    return pts[::schritt] + ([pts[-1]] if (len(pts) - 1) % schritt else [])
+
+
+def varianten(karten, ziel):
+    """Alle Varianten je Runde (karte0…karte2) als routen/<runde>.json, für «Andere Route» in der App."""
+    if not karten or not os.path.isdir(karten):
+        return 0
+    os.makedirs(ziel, exist_ok=True)
+    zahl = 0
+    for name in sorted(os.listdir(karten)):
+        d = os.path.join(karten, name)
+        kz = os.path.join(d, 'kennzahlen.txt')
+        if not os.path.isfile(kz):
+            continue
+        text, liste = open(kz, encoding='utf-8').read(), []
+        for i in range(6):
+            gpx = os.path.join(d, f'karte{i}.gpx')
+            m = re.search(rf'karte{i}: ([\d.]+) km, ↑(\d+) Hm', text)
+            if not (m and os.path.isfile(gpx)):
+                break
+            pts = [[round(float(a), 5), round(float(b), 5)] for a, b in re.findall(r'lat="([\d.]+)" lon="([\d.]+)"', open(gpx).read())]
+            if len(pts) >= 2:
+                liste.append({'km': m.group(1), 'hm': m.group(2), 'pts': duenn(pts)})
+        if len(liste) > 1:
+            json.dump(liste, open(os.path.join(ziel, name + '.json'), 'w'), separators=(',', ':'))
+            zahl += 1
+    return zahl
 
 
 def main():
@@ -95,6 +125,7 @@ def main():
     shutil.copy(os.path.join(ROOT, 'rheintal-bodensee.pmtiles'), os.path.join(out, 'karte.pmtiles'))
     r = routen(a.karten)
     json.dump(r, open(os.path.join(out, 'routes.json'), 'w'), separators=(',', ':'))
+    varianten(a.karten, os.path.join(out, 'routen'))
     plan.schreibe(os.path.join(out, 'plan.json'), WEB, profil.get('zeitzone', 'Europe/Zurich'))
     print('Seite:', out, '·', len(r), 'Routen ·', len(html) // 1024, 'KB index.html ·', 'Garmin-Vermittler' if relay else 'ohne Garmin-Vermittler')
 
