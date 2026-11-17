@@ -18,20 +18,38 @@ const norm=(a,desc)=>({id:String(a.id),name:a.name||'',sport_type:a.sport_type||
   reduced_polyline:a.map&&a.map.summary_polyline||'',summary:{distance:(a.distance||0)/1000,moving_time:a.moving_time||0,elevation_gain:a.total_elevation_gain||0}});
 
 let loading=false,lastLoad=0;
+const BE={'1K':'1 km','5K':'5 km','10K':'10 km','Half-Marathon':'Halbmarathon'};
+const toSec=t=>String(t).split(':').reduce((a,b)=>a*60+(+b),0),fmtT=x=>{const h=Math.floor(x/3600),m=Math.floor(x%3600/60),sek=Math.round(x%60);return h?`${h}:${pad(m)}:${pad(sek)}`:`${m}:${pad(sek)}`};
+Hooks.best=()=>{const be=mem.get('be',{}),top={};for(const o of Object.values(be))for(const lab in o)if(!top[lab]||o[lab][0]<top[lab][0])top[lab]=o[lab];
+  if(!Object.keys(top).length)return null;const out=BEST.map(b=>{const t=top[b[0]];if(t&&t[0]<toSec(b[2])){const d=new Date(t[1]+'T00:00:00');return [b[0],`${d.getDate()}. ${MON[d.getMonth()]}`+(d.getFullYear()!==new Date().getFullYear()?' '+d.getFullYear():''),fmtT(t[0])]}return b});
+  for(const lab of Object.values(BE))if(top[lab]&&!out.some(b=>b[0]===lab)){const d=new Date(top[lab][1]+'T00:00:00');out.push([lab,`${d.getDate()}. ${MON[d.getMonth()]}`,fmtT(top[lab][0])])}return out};
+Hooks.maxPuls=()=>mem.get('gmax',null);
 async function loadStrava(){if(!sv().refresh){ST.acts={s:'aus'};return}if(loading)return;loading=true;if(!RAW.acts)ST.acts={s:'laden'};
-  try{const now=new Date(),t0=new Date(now.getFullYear(),now.getMonth(),now.getDate()),mon=monday(t0),ms=new Date(now.getFullYear(),now.getMonth(),1),a=addD(mon,-63),from=a<ms?a:ms;
-    let list=[],page=1;for(;;){const part=await api(`/athlete/activities?after=${Math.floor(from/1000)}&per_page=100&page=${page}`);list=list.concat(part);if(part.length<100||page>=3)break;page++}
-    const desc=mem.get('desc',{}),need=list.filter(x=>isGym(x)&&!(x.id in desc)).slice(-40);
+  try{const now=new Date(),t0=new Date(now.getFullYear(),now.getMonth(),now.getDate()),from=addD(t0,-365),neu=addD(t0,-75); /* ein Jahr: für Serie, Bestzeiten und das Blättern im Monat */
+    let list=[],page=1;for(;;){const part=await api(`/athlete/activities?after=${Math.floor(from/1000)}&per_page=100&page=${page}`);list=list.concat(part);if(part.length<100||page>=7)break;page++}
+    const desc=mem.get('desc',{}),need=list.filter(x=>isGym(x)&&!(x.id in desc)&&new Date(x.start_date)>=neu).slice(-40);
     for(let i=0;i<need.length;i+=4){const got=await Promise.all(need.slice(i,i+4).map(x=>api('/activities/'+x.id).catch(()=>null)));
       got.forEach((d,k)=>{const x=need[i+k];if(!d)return;const txt=d.description||'';if(txt||Date.now()-Date.parse(x.start_date)>864e5)desc[x.id]=txt})}
-    mem.set('desc',desc);RAW.acts=list.map(x=>norm(x,desc));lastLoad=Date.now();mem.set('acts',{at:lastLoad,list:RAW.acts});ST.acts={s:'live',at:lastLoad};STRAVA_MSG=''}
+    mem.set('desc',desc);
+    /* Bestzeiten: Strava liefert sie nur in den Details eines Laufs. Pro Öffnen höchstens 12 neue Läufe nachladen. */
+    const be=mem.get('be',{}),br=list.filter(x=>/run/i.test(x.sport_type||x.type||'')&&!(x.id in be)).slice(-12);
+    for(let i=0;i<br.length;i+=4){const got=await Promise.all(br.slice(i,i+4).map(x=>api('/activities/'+x.id).catch(()=>null)));
+      got.forEach((d,k)=>{if(!d)return;const o={};for(const e of d.best_efforts||[]){const lab=BE[e.name];if(lab&&e.elapsed_time>0)o[lab]=[e.elapsed_time,(e.start_date_local||d.start_date_local||'').slice(0,10)]}be[br[i+k].id]=o})}
+    if(br.length)mem.set('be',be);
+    RAW.acts=list.map(x=>norm(x,desc));lastLoad=Date.now();mem.set('acts',{at:lastLoad,list:RAW.acts});ST.acts={s:'live',at:lastLoad};STRAVA_MSG=''}
   catch(e){STRAVA_MSG=e.message||'Strava ist gerade nicht erreichbar.';ST.acts=RAW.acts?{s:'live',at:lastLoad,alt:true}:{s:'fehler'}}
   loading=false;rebuild();render(true)}
 const setPlan=p=>{RAW.cal=p.events||[];ST.cal={s:'live',at:Date.parse(p.stand)||Date.now(),quelle:p.quelle}};
+/* Routen: routes.json hat je Runde die erste Variante, routen/<runde>.json alle (für «Andere Route»). */
+const toRt=q=>{const f=p=>p[0].toFixed(5)+','+p[1].toFixed(5),pts=q.pts,idx=[];for(let i=1;i<=9;i++)idx.push(Math.round(i*(pts.length-1)/10));return [q.km,q.hm,null,f(pts[0]),idx.map(i=>f(pts[i])).join('%7C'),pts]};
+const ALT={};
+async function loadAlt(key){if(ALT[key])return ALT[key];try{const j=await (await fetch('routen/'+key+'.json')).json();ALT[key]=Array.isArray(j)&&j.length?j.map(toRt):[ROUTES[key]]}catch(e){ALT[key]=[ROUTES[key]]}return ALT[key]}
+Maps.alt=key=>{if(!ROUTES[key])return null;const i=(mem.get('rv',{})[key])||0;if(i&&!ALT[key]){loadAlt(key).then(()=>{if(route().startsWith('geplant-'))render(true)});return {i:0,rt:ROUTES[key]}}return {i,rt:(ALT[key]&&ALT[key][i])||ROUTES[key]}};
+Maps.next=async key=>{const v=await loadAlt(key),rv=mem.get('rv',{});rv[key]=((rv[key]||0)+1)%v.length;mem.set('rv',rv);render(true)};
 async function loadFiles(){
   try{const p=await (await fetch('plan.json',{cache:'no-store'})).json();setPlan(p);mem.set('plan',p)}catch(e){if(!RAW.cal)ST.cal={s:'fehler'}}
-  try{const r=await (await fetch('routes.json')).json(),f=p=>p[0].toFixed(5)+','+p[1].toFixed(5),R={};
-    for(const k in r){const q=r[k],pts=q.pts,idx=[];for(let i=1;i<=9;i++)idx.push(Math.round(i*(pts.length-1)/10));R[k]=[q.km,q.hm,null,f(pts[0]),idx.map(i=>f(pts[i])).join('%7C'),pts]}ROUTES=R}catch(e){}
+  try{const r=await (await fetch('routes.json')).json(),R={};
+    for(const k in r)R[k]=toRt(r[k]);ROUTES=R}catch(e){}
   rebuild();render(true)}
 
 /* ---------- Anmeldung ---------- */
@@ -85,9 +103,9 @@ async function gGet(name,path){const go=async f=>fetch(RELAY+path,{headers:{Auth
 let gLoading=false,gLast=0;
 async function loadGarmin(){if(!RELAY||!gk().key||gLoading)return;gLoading=true;GDIAG={};
   try{const now=new Date(),t=ymd(now),y=ymd(addD(now,-1)),w=ymd(addD(now,-6));await gTok(false);
-    const [sum,bb,sl,sls,hrv,str]=await Promise.all([gGet('tag',`/usersummary-service/v2/dailysummaries?startDate=${t}&endDate=${t}`),gGet('batterie',`/wellness-service/wellness/bodyBattery/reports/daily?startDate=${y}&endDate=${t}&chunks=96`),gGet('schlaf',`/sleep-service/sleep/dailySleep?date=${t}`),
-      gGet('naechte',`/sleep-service/sleep/dailySleepSummariesByDate?startDate=${w}&endDate=${t}`),gGet('hrv',`/hrv-service/hrv/${t}`),gGet('stress',`/usersummary-service/stats/stress/daily/${t}/${t}`)].map(p=>p.catch(()=>null)));
-    if(Object.values(GDIAG).every(v=>!/^2/.test(v)))throw new Error('Garmin gibt keine Daten heraus ('+Object.values(GDIAG).map(v=>v.slice(0,3)).join(', ')+').');
+    const [sum,bb,sl,sls,hrv,str,zon]=await Promise.all([gGet('tag',`/usersummary-service/v2/dailysummaries?startDate=${t}&endDate=${t}`),gGet('batterie',`/wellness-service/wellness/bodyBattery/reports/daily?startDate=${y}&endDate=${t}&chunks=96`),gGet('schlaf',`/sleep-service/sleep/dailySleep?date=${t}`),
+      gGet('naechte',`/sleep-service/sleep/dailySleepSummariesByDate?startDate=${w}&endDate=${t}`),gGet('hrv',`/hrv-service/hrv/${t}`),gGet('stress',`/usersummary-service/stats/stress/daily/${t}/${t}`),gGet('zonen','/biometric-service/heartRateZones/v2')].map(p=>p.catch(()=>null)));
+    if(['tag','batterie','schlaf'].every(k=>!/^2/.test(GDIAG[k]||'')))throw new Error('Garmin gibt keine Daten heraus ('+Object.values(GDIAG).map(v=>v.slice(0,3)).join(', ')+').');
     const day=gRows(sum).find(x=>gDate(x)===t)||gRows(sum).pop()||{},bat=gRows(bb).find(x=>gDate(x)===t)||gRows(bb).pop()||{},arr=digV(bat,'bodyBatteryValuesArray',Array.isArray)||[];
     // Verlauf: Paare [Zeit, Wert] (bei chunks=96 Tiefst- und Höchstwert je Viertelstunde). Der jüngste Punkt ist der aktuellste Wert.
     const ms=v=>v<1e12?v*1000:v,pts=arr.filter(q=>Array.isArray(q)&&typeof q[0]==='number'&&q[0]>1e9).map(q=>[ms(q[0]),typeof q[2]==='number'?q[2]:q[1]]).filter(q=>typeof q[1]==='number').sort((a,b)=>a[0]-b[0]),lastP=pts.length?pts[pts.length-1]:null,lvl=lastP?lastP[1]:null;
@@ -102,6 +120,7 @@ async function loadGarmin(){if(!RELAY||!gk().key||gLoading)return;gLoading=true;
     GWERT={fassung:VERSION,jetzt:new Date().toISOString(),tagEndeGmt:wc.endTimestampGmt,tagEndeLokal:wc.endTimestampLocal,uebersicht:{latest:B.latestValue,max:B.maxValue,min:B.minValue,geladen:B.chargedValue,verbraucht:B.drainedValue},verlaufPunkte:pts.length,verlaufEnde:pts.slice(-4).map(q=>[new Date(q[0]).toISOString(),q[1]]),gewaehlt:ausVerlauf?'verlauf':'uebersicht',energie:energy};
     const rec={heute:true,asof:loc||undefined,energy,energyText:[wake!=null?`Aufgewacht mit ${wake}.`:top!=null?`Höchststand heute ${top}.`:'',ch!=null?`${(ausVerlauf?dig(bat,'charged','chargedValue'):null)??ch} geladen, ${(ausVerlauf?dig(bat,'drained','drainedValue'):null)??dr??0} verbraucht.`:'',alt?'Neuere Werte gibt Garmin noch nicht heraus.':''].filter(Boolean).join(' '),sleep:secs?hmm(secs):null,score:cur?gScore(cur):null,rhr:n1((day.heartRate||{}).restingValue)??dig(day,'restingHeartRate','restingHeartRateInBeatsPerMinute'),stress:n1((day.stress||{}).avgLevel)??dig(day,'averageStressLevel')??dig(str,'overallStressLevel','averageStressLevel'),hrv:dig(hrv,'lastNightAvg'),nights,
       phases:secs&&ph[0]!=null?[['Tief',ph[0]],['Leicht',ph[1]],['REM',ph[2]],['Wach',ph[3]]].map(q=>[q[0],hmm(q[1]||0),Math.max(1,Math.round((q[1]||0)/60))]):null};
+    const mx=dig(zon,'maxHeartRateUsed','maxHeartRate','maxHr');if(mx>120&&mx<240)mem.set('gmax',mx);
     gLast=Date.now();mem.set('garmin',{at:gLast,rec,live:true});GMSG=rec.energy==null&&rec.rhr==null&&!rec.sleep?'Verbunden, aber Garmin hat für heute noch keine Werte.':'';}
   catch(e){GMSG=e.message||'Garmin ist gerade nicht erreichbar.';if(e.auth){mem.set('gk',{});GDIAG={}}}
   gLoading=false;useGarmin();rebuild();render(true)}

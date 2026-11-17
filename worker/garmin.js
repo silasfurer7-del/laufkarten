@@ -10,6 +10,7 @@ const LESEN = [
   /^\/wellness-service\/wellness\/bodyBattery\/reports\/daily$/,
   /^\/sleep-service\/sleep\/(dailySleep|dailySleepSummariesByDate)$/,
   /^\/hrv-service\/hrv\/(daily\/[\d-]+\/)?[\d-]+$/,
+  /^\/biometric-service\/heartRateZones\/v2$/,
 ];
 
 export default {

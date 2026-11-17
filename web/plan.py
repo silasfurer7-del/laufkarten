@@ -3,7 +3,7 @@ und schreibt nur die Trainings-Termine nach plan.json. Ohne Secret gilt web/plan
 import datetime as dt, json, os, re, urllib.request
 from zoneinfo import ZoneInfo
 
-TRAINING = re.compile(r'lauf|interval|\brun\b|jog|push|pull|beine|\bleg|gym|kraft', re.I)
+TRAINING = re.compile(r'lauf|interval|\brun\b|jog|push|pull|beine|\bleg|gym|kraft|oberk|unterk|ganzk', re.I)
 
 
 def aus_kalender(url, tz, von, bis):
