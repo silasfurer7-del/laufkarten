@@ -268,7 +268,7 @@ V.erholung=()=>{if(REC.none)return `<main class="page">${head('Erholung')}<div c
     :`<p class="b15 gr" style="margin-top:15px">Für letzte Nacht ist bei Garmin noch kein Schlaf angekommen. Trag die Uhr nachts und synchronisiere sie am Morgen.</p>`}</div>
   <div class="card" style="padding-bottom:20px"><div class="s26 ct">sieben nächte</div><div class="lab cr">Schlafwert</div>
     <div class="days" style="margin-top:17px">${R.nights.map(n=>`<div class="day">${n[1]==null?'<span class="dot frei"></span>':`<span class="dot" style="background:rgba(31,63,214,${n[1]/100});color:${n[1]>=50?'var(--bg)':'var(--ink)'}">${n[1]}</span>`}<span class="b12" style="margin-top:8px">${n[0]}</span></div>`).join('')}</div></div>
-  ${kz([['Ruhepuls',R.rhr||'–','bpm'],['Stress',R.stress||'–',R.asof?'Ø Tag':'Ø heute'],['HRV',R.hrv||'–','ms']])}
+  ${kz([['Ruhepuls',R.rhr||'–','bpm'],['Stress',R.stress||'–',R.asof&&!R.heute?'Ø Tag':'Ø heute'],['HRV',R.hrv||'–','ms']])}
   ${R.example?'<p class="b12 gr" style="padding:0 18px">Schlaf, Energiestand und HRV sind Beispielwerte, bis Garmin echte Daten liefert.</p>':''}
 </div></main>${nav('erholung')}`};
 
