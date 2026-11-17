@@ -45,6 +45,9 @@ def main():
         relay = cf.finde()[1] or ''
     js = js.replace("/*GARMIN_RELAY*/''", json.dumps(relay.rstrip('/')), 1)
     js = js.replace("/*STRAVA_CLIENT_ID*/''", json.dumps(re.sub(r'\D', '', os.environ.get('STRAVA_CLIENT_ID', ''))), 1)
+    import hashlib
+    version = hashlib.sha1((js + lies('style.css')).encode()).hexdigest()[:12]  # ändert sich nur mit dem Code, nicht stündlich
+    js = js.replace("/*VERSION*/''", json.dumps(version), 1)
     titel = f"{profil.get('name', '')} Sport".strip()
     html = f"""<!DOCTYPE html>
 <html lang="de">
@@ -82,6 +85,7 @@ def main():
     os.makedirs(out)
     open(os.path.join(out, 'index.html'), 'w', encoding='utf-8').write(html)
     open(os.path.join(out, '.nojekyll'), 'w').close()
+    open(os.path.join(out, 'version.txt'), 'w').write(version)
     shutil.copytree(os.path.join(WEB, 'vendor'), os.path.join(out, 'vendor'))
     for n in (180, 192, 512):
         shutil.copy(os.path.join(WEB, f'icon-{n}.png'), out)

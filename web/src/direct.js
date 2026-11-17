@@ -156,7 +156,15 @@ Hooks.after=()=>{const el=document.querySelector('[data-live]');if(!el||!MAPSEGS
       const d=document.createElement('div');d.className='ml'+(['city','town','village'].includes(p.kind)?' big':'');d.textContent=p.name;new maplibregl.Marker({element:d}).setLngLat(f.geometry.coordinates).addTo(map)}})});
   LIVE.push(map)};
 
+/* ---------- Neue Fassung der App von selbst holen ---------- */
+// GitHub Pages lässt den Browser die Seite bis zu 10 Minuten zwischenspeichern. Darum beim Öffnen prüfen,
+// ob es eine neuere Fassung gibt, sie am Zwischenspeicher vorbei laden und einmal neu starten.
+const VERSION=/*VERSION*/'';
+async function checkVersion(){if(!VERSION)return;try{const v=(await (await fetch('version.txt',{cache:'no-store'})).text()).trim();if(!v||v===VERSION||v.length>80)return;
+  let seen='';try{seen=sessionStorage.getItem('ss.v')||''}catch(e){}if(seen===v)return;const a=document.activeElement;if(a&&a.matches&&a.matches('.fld,[data-note]'))return;
+  try{sessionStorage.setItem('ss.v',v)}catch(e){return}await fetch(location.pathname,{cache:'reload'}).catch(()=>{});location.reload()}catch(e){}}
+
 /* ---------- Start ---------- */
 (async()=>{const c=mem.get('acts',null),pl=mem.get('plan',null);if(pl&&pl.events)setPlan(pl);else ST.cal={s:'laden'};useGarmin();if(c&&c.list&&sv().refresh){RAW.acts=c.list;lastLoad=c.at;ST.acts={s:'live',at:c.at}}rebuild();
-  await oauthReturn();render();loadFiles();loadStrava();loadGarmin()})();
-document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-lastLoad>90e3){loadFiles();loadStrava()}if(!document.hidden&&Date.now()-gLast>90e3)loadGarmin()});
+  await oauthReturn();render();checkVersion();loadFiles();loadStrava();loadGarmin()})();
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkVersion();if(!document.hidden&&Date.now()-lastLoad>90e3){loadFiles();loadStrava()}if(!document.hidden&&Date.now()-gLast>90e3)loadGarmin()});
