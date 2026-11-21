@@ -1,0 +1,3 @@
+karte0: 29.0 km, ↑566 Hm, doppelt 5 m, Pfad/Weg 34 %, Dorf 27 %, Hauptstrasse 462 m
+karte1: 28.8 km, ↑569 Hm, doppelt 0 m, Pfad/Weg 52 %, Dorf 25 %, Hauptstrasse 0 m
+karte2: 28.8 km, ↑629 Hm, doppelt 0 m, Pfad/Weg 45 %, Dorf 24 %, Hauptstrasse 53 m
