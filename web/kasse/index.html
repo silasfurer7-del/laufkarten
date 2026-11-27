@@ -57,13 +57,10 @@
   .label { font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600; margin-bottom: 8px; }
   .change { display: none; }
   .change.on { display: block; }
-  .give { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; margin-bottom: 8px; }
+  .give { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; }
   .give input { width: 100%; min-width: 0; font: inherit; font-size: 18px; padding: 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); color: var(--text); }
   .giveout { font-size: 19px; font-weight: 800; white-space: nowrap; }
   .giveout.bad { color: var(--warn); }
-  .chline { display: flex; justify-content: space-between; padding: 7px 0; font-size: 17px; border-top: 1px solid var(--line); }
-  .chline:first-of-type { border-top: 0; }
-  .chline b { font-weight: 700; }
 
   .bar { position: fixed; left: 0; right: 0; bottom: 0; background: var(--card); border-top: 1px solid var(--line); padding: 10px 14px calc(12px + env(safe-area-inset-bottom)); display: none; }
   .bar.on { display: block; }
@@ -118,7 +115,6 @@
       <input id="given" type="text" inputmode="decimal" autocomplete="off" placeholder="Kunde gibt (CHF)" aria-label="Kunde gibt, Betrag in Franken">
       <div class="giveout num" id="giveout"></div>
     </div>
-    <div id="chlines"></div>
   </div>
 </div>
 
@@ -176,7 +172,6 @@
     { id: "taschen",         name: "Taschen",         price: 1700 },
     { id: "tischset",        name: "Tischset",        price: 700 }
   ];
-  var NOTES = [1000, 2000, 5000, 10000, 20000];
   var KEY = "preisrechner-v2";
   var OLDKEY = "preisrechner-v1";
   var state = { cart: {}, sales: [] };
@@ -280,23 +275,6 @@
     $("pay-twint").disabled = pieces === 0;
     $("clear").disabled = pieces === 0;
 
-    // Rückgeld für die nächsten passenden Noten
-    var lines = $("chlines");
-    lines.innerHTML = "";
-    var shown = 0;
-    NOTES.forEach(function (note) {
-      if (note > total && total > 0 && shown < 3) {
-        var div = document.createElement("div");
-        div.className = "chline num";
-        var a = document.createElement("span");
-        a.textContent = "Kunde gibt " + (note / 100);
-        var b = document.createElement("b");
-        b.textContent = num(note - total) + " zurück";
-        div.appendChild(a); div.appendChild(b);
-        lines.appendChild(div);
-        shown++;
-      }
-    });
     $("change").classList.toggle("on", total > 0);
     if (total === 0) $("given").value = "";
     renderGiven();
