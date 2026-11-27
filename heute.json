@@ -1,0 +1,62 @@
+{
+ "datum": "2026-11-28",
+ "einheit": "Sa: Lockerer Lauf 8 km + Push, 12:00",
+ "vorgabe": "6:10–6:30/km, Puls unter 154, danach Push",
+ "varianten": [
+  {
+   "profil": "normal",
+   "label": "Normal",
+   "datei": "/home/runner/work/laufkarten/laufkarten/heute/heute_normal.png",
+   "gpx": "/home/runner/work/laufkarten/laufkarten/heute/heute_normal.gpx",
+   "km": 7.7,
+   "hm": 196,
+   "doppelt": 0,
+   "pfad_prozent": 54,
+   "text": "7.7 km, ↑196 Hm, doppelt 0 m, Pfad/Weg 54 %, Dorf 18 %, Hauptstrasse 0 m"
+  },
+  {
+   "profil": "strasse",
+   "label": "Nur Strasse",
+   "datei": "/home/runner/work/laufkarten/laufkarten/heute/heute_strasse.png",
+   "gpx": "/home/runner/work/laufkarten/laufkarten/heute/heute_strasse.gpx",
+   "km": 8.0,
+   "hm": 211,
+   "doppelt": 4,
+   "pfad_prozent": 21,
+   "text": "8.0 km, ↑211 Hm, doppelt 4 m, Pfad/Weg 21 %, Dorf 44 %, Hauptstrasse 0 m"
+  },
+  {
+   "profil": "huegel",
+   "label": "Höhenmeter",
+   "datei": "/home/runner/work/laufkarten/laufkarten/heute/heute_huegel.png",
+   "gpx": "/home/runner/work/laufkarten/laufkarten/heute/heute_huegel.gpx",
+   "km": 8.0,
+   "hm": 349,
+   "doppelt": 0,
+   "pfad_prozent": 24,
+   "text": "8.0 km, ↑349 Hm, doppelt 0 m, Pfad/Weg 24 %, Dorf 10 %, Hauptstrasse 0 m"
+  },
+  {
+   "profil": "flach",
+   "label": "Flach",
+   "datei": "/home/runner/work/laufkarten/laufkarten/heute/heute_flach.png",
+   "gpx": "/home/runner/work/laufkarten/laufkarten/heute/heute_flach.gpx",
+   "km": 7.3,
+   "hm": 189,
+   "doppelt": 9,
+   "pfad_prozent": 44,
+   "text": "7.3 km, ↑189 Hm, doppelt 9 m, Pfad/Weg 44 %, Dorf 25 %, Hauptstrasse 0 m"
+  },
+  {
+   "profil": "natur",
+   "label": "Natur",
+   "datei": "/home/runner/work/laufkarten/laufkarten/heute/heute_natur.png",
+   "gpx": "/home/runner/work/laufkarten/laufkarten/heute/heute_natur.gpx",
+   "km": 7.9,
+   "hm": 269,
+   "doppelt": 4,
+   "pfad_prozent": 79,
+   "text": "7.9 km, ↑269 Hm, doppelt 4 m, Pfad/Weg 79 %, Dorf 4 %, Hauptstrasse 0 m"
+  }
+ ]
+}
