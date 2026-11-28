@@ -118,6 +118,7 @@ def main():
     open(os.path.join(out, 'version.txt'), 'w').write(version)
     shutil.copytree(os.path.join(WEB, 'vendor'), os.path.join(out, 'vendor'))
     shutil.copytree(os.path.join(WEB, 'kasse'), os.path.join(out, 'kasse'))  # Marktkasse, eigene kleine Seite unter /kasse/
+    shutil.copytree(os.path.join(WEB, 'kasse2'), os.path.join(out, 'kasse2'))  # Marktkasse Tag 2 (andere Preise, eigene Zählung)
     for n in (180, 192, 512):
         shutil.copy(os.path.join(WEB, f'icon-{n}.png'), out)
     json.dump({'name': titel, 'short_name': 'Sport', 'start_url': '.', 'display': 'standalone', 'background_color': '#EDE7DA',

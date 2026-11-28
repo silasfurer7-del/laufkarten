@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kasse Tag 2</title>
+<meta name="theme-color" content="#f4f2ee" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#151514" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Kasse Tag 2">
+<meta name="robots" content="noindex">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-180.png">
+<style>
+  :root {
+    --bg: #f4f2ee; --card: #ffffff; --text: #1c1b19; --muted: #6f6b64;
+    --line: #e3dfd7; --accent: #1f6f4a; --soft: #ece8e0; --warn: #b3261e; --twint: #1c1b19;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #151514; --card: #21201e; --text: #f2efe9; --muted: #a39e94;
+      --line: #34322e; --accent: #3f9d6e; --soft: #2e2c29; --warn: #e0594f; --twint: #4a4741;
+    }
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    padding: calc(12px + env(safe-area-inset-top)) 14px calc(170px + env(safe-area-inset-bottom)); max-width: 520px; margin: 0 auto;
+    touch-action: manipulation;
+  }
+  button { font: inherit; color: inherit; border: 0; cursor: pointer; user-select: none; -webkit-user-select: none; }
+  button:disabled { opacity: 0.4; cursor: default; }
+  .num { font-variant-numeric: tabular-nums; }
+
+  .tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; background: var(--soft); padding: 5px; border-radius: 14px; margin-bottom: 14px; }
+  .tab { padding: 12px 8px; border-radius: 10px; font-size: 16px; font-weight: 600; background: transparent; color: var(--muted); }
+  .tab.on { background: var(--card); color: var(--text); }
+
+  .view { display: none; }
+  .view.on { display: block; }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 12px; margin-bottom: 10px; }
+  .row { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; }
+  .name { font-size: 18px; font-weight: 600; }
+  .sub { font-size: 14px; color: var(--muted); margin-top: 3px; }
+  .ctrl { display: flex; align-items: center; gap: 6px; }
+  .btn { width: 56px; height: 56px; border-radius: 14px; font-size: 30px; line-height: 1; font-weight: 500; }
+  .btn:active { transform: scale(0.95); }
+  .minus { background: var(--soft); }
+  .plus { background: var(--accent); color: #fff; }
+  .count { min-width: 44px; text-align: center; font-size: 24px; font-weight: 700; }
+
+  .label { font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600; margin-bottom: 8px; }
+  .change { display: none; }
+  .change.on { display: block; }
+  .give { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; }
+  .give input { width: 100%; min-width: 0; font: inherit; font-size: 18px; padding: 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); color: var(--text); }
+  .giveout { font-size: 19px; font-weight: 800; white-space: nowrap; }
+  .giveout.bad { color: var(--warn); }
+
+  .bar { position: fixed; left: 0; right: 0; bottom: 0; background: var(--card); border-top: 1px solid var(--line); padding: 10px 14px calc(12px + env(safe-area-inset-bottom)); display: none; }
+  .bar.on { display: block; }
+  .barin { max-width: 520px; margin: 0 auto; }
+  .bartop { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
+  .totlabel { font-size: 14px; color: var(--muted); }
+  .total { font-size: 30px; font-weight: 800; }
+  .pay { display: grid; grid-template-columns: auto 1fr 1fr; gap: 8px; }
+  .paybtn { padding: 16px 10px; border-radius: 14px; font-size: 17px; font-weight: 700; color: #fff; }
+  .paybtn.cash { background: var(--accent); }
+  .paybtn.twint { background: var(--twint); }
+  .clear { padding: 16px 14px; border-radius: 14px; background: var(--soft); font-size: 15px; font-weight: 600; }
+
+  .toast { position: fixed; left: 14px; right: 14px; bottom: calc(150px + env(safe-area-inset-bottom)); max-width: 492px; margin: 0 auto; background: var(--text); color: var(--bg); border-radius: 14px; padding: 12px 14px; display: none; align-items: center; justify-content: space-between; gap: 10px; font-size: 15px; }
+  .toast.on { display: flex; }
+  .toast button { background: transparent; color: inherit; font-weight: 700; text-decoration: underline; padding: 6px; }
+
+  .big { font-size: 34px; font-weight: 800; }
+  .split { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 10px; }
+  .split div { background: var(--soft); border-radius: 12px; padding: 10px; }
+  .split .k { font-size: 12px; color: var(--muted); }
+  .split .v { font-size: 16px; font-weight: 700; margin-top: 2px; }
+  .prow { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; padding: 9px 0; border-top: 1px solid var(--line); font-size: 17px; align-items: baseline; }
+  .prow:first-of-type { border-top: 0; }
+  .prow .n { font-weight: 700; min-width: 34px; text-align: right; }
+  .prow .s { color: var(--muted); min-width: 92px; text-align: right; }
+  .sale { display: grid; grid-template-columns: 1fr auto; gap: 8px; padding: 10px 0; border-top: 1px solid var(--line); align-items: center; }
+  .sale:first-of-type { border-top: 0; }
+  .sale .top { font-size: 16px; font-weight: 600; }
+  .sale .items { font-size: 14px; color: var(--muted); margin-top: 2px; }
+  .small { background: var(--soft); border-radius: 10px; padding: 9px 11px; font-size: 14px; font-weight: 600; }
+  .small.sure, .wide.sure { background: var(--warn); color: #fff; }
+  .wide { display: block; width: 100%; padding: 14px; border-radius: 14px; background: var(--soft); font-size: 16px; font-weight: 600; margin-bottom: 10px; }
+  .empty { color: var(--muted); font-size: 15px; padding: 6px 0; }
+  textarea { display: none; width: 100%; min-height: 150px; border-radius: 12px; border: 1px solid var(--line); background: var(--card); color: var(--text); font: inherit; font-size: 14px; padding: 10px; margin-bottom: 10px; }
+  textarea.on { display: block; }
+</style>
+</head>
+<body>
+
+<div class="tabs">
+  <button class="tab on" id="tab-kasse">Kasse</button>
+  <button class="tab" id="tab-verkauft">Verkauft</button>
+</div>
+
+<!-- KASSE: aktueller Kunde -->
+<div class="view on" id="view-kasse">
+  <div id="list"></div>
+  <div class="card change" id="change">
+    <div class="label">Rückgeld</div>
+    <div class="give">
+      <input id="given" type="text" inputmode="decimal" autocomplete="off" placeholder="Kunde gibt (CHF)" aria-label="Kunde gibt, Betrag in Franken">
+      <div class="giveout num" id="giveout"></div>
+    </div>
+  </div>
+</div>
+
+<!-- VERKAUFT: Übersicht für die Verkäufer -->
+<div class="view" id="view-verkauft">
+  <div class="card">
+    <div class="label">Umsatz Tag 2</div>
+    <div class="big num" id="sum-total">CHF 0.00</div>
+    <div class="split">
+      <div><div class="k">Verkäufe</div><div class="v num" id="sum-count">0</div></div>
+      <div><div class="k">Bar</div><div class="v num" id="sum-cash">0.00</div></div>
+      <div><div class="k">Twint</div><div class="v num" id="sum-twint">0.00</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="label">Verkaufte Produkte</div>
+    <div id="prows"></div>
+  </div>
+
+  <div class="card">
+    <div class="label">Einzelne Verkäufe</div>
+    <div id="sales"></div>
+  </div>
+
+  <button class="wide" id="copy">Zusammenfassung kopieren</button>
+  <textarea id="copytext" readonly></textarea>
+  <button class="wide" id="resetday">Alles zurücksetzen</button>
+</div>
+
+<div class="toast" id="toast">
+  <span id="toasttext"></span>
+  <button id="undo">Rückgängig</button>
+</div>
+
+<div class="bar on" id="bar">
+  <div class="barin">
+    <div class="bartop">
+      <div class="totlabel num" id="pieces">0 Stück</div>
+      <div class="total num" id="total">CHF 0.00</div>
+    </div>
+    <div class="pay">
+      <button class="clear" id="clear">Leeren</button>
+      <button class="paybtn cash" id="pay-cash">Bar</button>
+      <button class="paybtn twint" id="pay-twint">Twint</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Preise in Rappen, damit nichts falsch gerundet wird
+  var products = [
+    { id: "glasuntersetzer", name: "Glasuntersetzer", price: 350 },
+    { id: "weintaschen",     name: "Weintaschen",     price: 900 },
+    { id: "taschen",         name: "Taschen",         price: 1600 },
+    { id: "tischset",        name: "Tischset",        price: 700 }
+  ];
+  var KEY = "preisrechner-tag2";
+  var OLDKEY = "preisrechner-v1";
+  var state = { cart: {}, sales: [] };
+
+  function $(id) { return document.getElementById(id); }
+  function num(rappen) { return (rappen / 100).toFixed(2); }
+  function chf(rappen) { return "CHF " + num(rappen); }
+  function pad(n) { return n < 10 ? "0" + n : "" + n; }
+  function clock(t) { var d = new Date(t); return pad(d.getHours()) + ":" + pad(d.getMinutes()); }
+
+  function load() {
+    try {
+      var s = JSON.parse(localStorage.getItem(KEY) || "null");
+      if (s && typeof s === "object") {
+        if (s.cart && typeof s.cart === "object") state.cart = s.cart;
+        if (Array.isArray(s.sales)) state.sales = s.sales;
+      } else {
+        var old = JSON.parse(localStorage.getItem(OLDKEY) || "null");
+        if (old && typeof old === "object") state.cart = old;
+      }
+    } catch (e) {}
+    products.forEach(function (p) {
+      var n = parseInt(state.cart[p.id], 10);
+      state.cart[p.id] = n > 0 ? n : 0;
+    });
+  }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+  }
+
+  function cartTotal() {
+    var t = 0;
+    products.forEach(function (p) { t += state.cart[p.id] * p.price; });
+    return t;
+  }
+  function cartPieces() {
+    var n = 0;
+    products.forEach(function (p) { n += state.cart[p.id]; });
+    return n;
+  }
+  function itemsText(items) {
+    var parts = [];
+    products.forEach(function (p) {
+      if (items[p.id] > 0) parts.push(items[p.id] + " × " + p.name);
+    });
+    return parts.join(", ");
+  }
+
+  // Knopf, der zur Sicherheit zwei Tipps braucht
+  function twoTap(btn, label, sureLabel, action) {
+    var armed = false, timer = null;
+    function disarm() {
+      armed = false; clearTimeout(timer);
+      btn.classList.remove("sure"); btn.textContent = label;
+    }
+    btn.addEventListener("click", function () {
+      if (!armed) {
+        armed = true; btn.classList.add("sure"); btn.textContent = sureLabel;
+        timer = setTimeout(disarm, 3000);
+        return;
+      }
+      disarm(); action();
+    });
+  }
+
+  // ---------- Kasse ----------
+  var list = $("list");
+  products.forEach(function (p) {
+    var card = document.createElement("div");
+    card.className = "card row";
+    card.innerHTML =
+      '<div><div class="name"></div><div class="sub num" id="sub-' + p.id + '"></div></div>' +
+      '<div class="ctrl">' +
+        '<button class="btn minus">−</button>' +
+        '<div class="count num" id="cnt-' + p.id + '">0</div>' +
+        '<button class="btn plus">+</button>' +
+      '</div>';
+    card.querySelector(".name").textContent = p.name;
+    card.querySelector(".minus").setAttribute("aria-label", p.name + " minus");
+    card.querySelector(".plus").setAttribute("aria-label", p.name + " plus");
+    card.querySelector(".minus").addEventListener("click", function () { change(p.id, -1); });
+    card.querySelector(".plus").addEventListener("click", function () { change(p.id, 1); });
+    list.appendChild(card);
+  });
+
+  function change(id, d) {
+    state.cart[id] = Math.max(0, state.cart[id] + d);
+    save(); renderKasse();
+  }
+
+  function renderKasse() {
+    var total = cartTotal(), pieces = cartPieces();
+    products.forEach(function (p) {
+      var n = state.cart[p.id];
+      $("cnt-" + p.id).textContent = n;
+      $("sub-" + p.id).textContent = chf(p.price) + (n > 0 ? "  ·  " + chf(n * p.price) : "");
+    });
+    $("total").textContent = chf(total);
+    $("pieces").textContent = pieces + " Stück";
+    $("pay-cash").disabled = pieces === 0;
+    $("pay-twint").disabled = pieces === 0;
+    $("clear").disabled = pieces === 0;
+
+    $("change").classList.toggle("on", total > 0);
+    if (total === 0) $("given").value = "";
+    renderGiven();
+  }
+
+  // Rückgeld für einen selbst eingegebenen Betrag
+  function renderGiven() {
+    var out = $("giveout"), total = cartTotal();
+    var v = parseFloat($("given").value.replace(",", "."));
+    out.classList.remove("bad");
+    if (!(v > 0) || total === 0) { out.textContent = ""; return; }
+    var rest = Math.round(v * 100) - total;
+    if (rest >= 0) {
+      out.textContent = num(rest) + " zurück";
+    } else {
+      out.textContent = "Es fehlen " + num(-rest);
+      out.classList.add("bad");
+    }
+  }
+  $("given").addEventListener("input", renderGiven);
+
+  var lastSale = null, toastTimer = null;
+  function finish(pay) {
+    if (cartPieces() === 0) return;
+    var items = {};
+    products.forEach(function (p) { if (state.cart[p.id] > 0) items[p.id] = state.cart[p.id]; });
+    var sale = { t: Date.now(), items: items, total: cartTotal(), pay: pay };
+    state.sales.push(sale);
+    products.forEach(function (p) { state.cart[p.id] = 0; });
+    save(); renderAll();
+    lastSale = sale;
+    $("toasttext").textContent = "Gespeichert: " + chf(sale.total) + " " + (pay === "twint" ? "Twint" : "Bar");
+    $("toast").classList.add("on");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(hideToast, 6000);
+  }
+  function hideToast() { $("toast").classList.remove("on"); lastSale = null; }
+
+  $("pay-cash").addEventListener("click", function () { finish("bar"); });
+  $("pay-twint").addEventListener("click", function () { finish("twint"); });
+  $("clear").addEventListener("click", function () {
+    products.forEach(function (p) { state.cart[p.id] = 0; });
+    save(); renderKasse();
+  });
+  $("undo").addEventListener("click", function () {
+    if (!lastSale) return;
+    var i = state.sales.indexOf(lastSale);
+    if (i >= 0) {
+      state.sales.splice(i, 1);
+      products.forEach(function (p) { state.cart[p.id] = lastSale.items[p.id] || 0; });
+    }
+    clearTimeout(toastTimer); hideToast();
+    save(); renderAll();
+  });
+
+  // ---------- Verkauft ----------
+  function summary() {
+    var s = { total: 0, cash: 0, twint: 0, count: state.sales.length, per: {} };
+    products.forEach(function (p) { s.per[p.id] = 0; });
+    state.sales.forEach(function (sale) {
+      s.total += sale.total;
+      if (sale.pay === "twint") s.twint += sale.total; else s.cash += sale.total;
+      products.forEach(function (p) { s.per[p.id] += sale.items[p.id] || 0; });
+    });
+    return s;
+  }
+
+  function renderVerkauft() {
+    var s = summary();
+    $("sum-total").textContent = chf(s.total);
+    $("sum-count").textContent = s.count;
+    $("sum-cash").textContent = num(s.cash);
+    $("sum-twint").textContent = num(s.twint);
+
+    var prows = $("prows");
+    prows.innerHTML = "";
+    products.forEach(function (p) {
+      var div = document.createElement("div");
+      div.className = "prow num";
+      var a = document.createElement("span"); a.textContent = p.name;
+      var b = document.createElement("span"); b.className = "n"; b.textContent = s.per[p.id] + " ×";
+      var c = document.createElement("span"); c.className = "s"; c.textContent = chf(s.per[p.id] * p.price);
+      div.appendChild(a); div.appendChild(b); div.appendChild(c);
+      prows.appendChild(div);
+    });
+
+    var box = $("sales");
+    box.innerHTML = "";
+    if (state.sales.length === 0) {
+      var e = document.createElement("div");
+      e.className = "empty";
+      e.textContent = "Noch keine Verkäufe.";
+      box.appendChild(e);
+    }
+    state.sales.slice().reverse().forEach(function (sale) {
+      var div = document.createElement("div");
+      div.className = "sale";
+      var left = document.createElement("div");
+      var top = document.createElement("div");
+      top.className = "top num";
+      top.textContent = clock(sale.t) + "  ·  " + chf(sale.total) + "  ·  " + (sale.pay === "twint" ? "Twint" : "Bar");
+      var items = document.createElement("div");
+      items.className = "items";
+      items.textContent = itemsText(sale.items);
+      left.appendChild(top); left.appendChild(items);
+      var del = document.createElement("button");
+      del.className = "small";
+      del.textContent = "Löschen";
+      twoTap(del, "Löschen", "Sicher?", function () {
+        var i = state.sales.indexOf(sale);
+        if (i >= 0) state.sales.splice(i, 1);
+        save(); renderVerkauft();
+      });
+      div.appendChild(left); div.appendChild(del);
+      box.appendChild(div);
+    });
+  }
+
+  function summaryText() {
+    var s = summary(), d = new Date();
+    var out = ["Verkäufe " + pad(d.getDate()) + "." + pad(d.getMonth() + 1) + "." + d.getFullYear(), ""];
+    products.forEach(function (p) {
+      out.push(p.name + ": " + s.per[p.id] + " × " + num(p.price) + " = " + chf(s.per[p.id] * p.price));
+    });
+    out.push("");
+    out.push("Total: " + chf(s.total) + " (" + s.count + " Verkäufe)");
+    out.push("Bar: " + chf(s.cash));
+    out.push("Twint: " + chf(s.twint));
+    return out.join("\n");
+  }
+
+  $("copy").addEventListener("click", function () {
+    var text = summaryText(), btn = $("copy"), area = $("copytext");
+    function showManual() {
+      area.value = text; area.classList.add("on");
+      btn.textContent = "Text unten markieren und kopieren";
+    }
+    try {
+      navigator.clipboard.writeText(text).then(function () {
+        btn.textContent = "Kopiert";
+        setTimeout(function () { btn.textContent = "Zusammenfassung kopieren"; }, 2000);
+      }, showManual);
+    } catch (e) { showManual(); }
+  });
+
+  twoTap($("resetday"), "Alles zurücksetzen", "Wirklich alle Verkäufe löschen?", function () {
+    state.sales = [];
+    save(); renderVerkauft();
+  });
+
+  // ---------- Tabs ----------
+  function show(which) {
+    var kasse = which === "kasse";
+    $("tab-kasse").classList.toggle("on", kasse);
+    $("tab-verkauft").classList.toggle("on", !kasse);
+    $("view-kasse").classList.toggle("on", kasse);
+    $("view-verkauft").classList.toggle("on", !kasse);
+    $("bar").classList.toggle("on", kasse);
+    if (!kasse) { clearTimeout(toastTimer); hideToast(); renderVerkauft(); }
+  }
+  $("tab-kasse").addEventListener("click", function () { show("kasse"); });
+  $("tab-verkauft").addEventListener("click", function () { show("verkauft"); });
+
+  function renderAll() { renderKasse(); renderVerkauft(); }
+
+  // Browser bitten, die gespeicherten Verkäufe nicht von sich aus zu löschen
+  try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(function () {}); } catch (e) {}
+
+  load();
+  renderAll();
+</script>
+</body>
+</html>
